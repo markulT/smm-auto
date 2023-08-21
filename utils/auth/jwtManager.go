@@ -15,22 +15,36 @@ func (e EmailReadingError)Error() string {
 	return e.Message
 }
 
-func CreateAccessToken(body map[string]interface{}) (string, error) {
+type Tokens struct {
+	AccessToken string
+	RefreshToken string
+}
+
+func createToken(body map[string]interface{}, expirationTime time.Time, secretKey []byte) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	for key, value := range body {
 		claims[key] = value
 	}
-	expirationTime := utils.GetEnvInt("expirationTimeHours", 1)
-	expirationTimeUnix := time.Now().Add(time.Duration(expirationTime) * time.Hour)
-	claims["exp"] = expirationTimeUnix.Unix()
-
-	secretKey := []byte(os.Getenv("secretKey"))
+	claims["exp"] = expirationTime.Unix()
 	signedToken, err := token.SignedString(secretKey)
-	if err!=nil {
+	if err != nil {
 		return "", err
 	}
-	return signedToken, nil
+	return signedToken, err
+}
+
+func CreateAccessToken(body map[string]interface{}) (string, error) {
+
+	expirationTime := utils.GetEnvInt("refreshExpirationTimeDays", 30)
+	expirationTimeUnix := time.Now().Add(time.Duration(expirationTime) * time.Hour)
+
+	return createToken(body, expirationTimeUnix, []byte(os.Getenv("secretKey")))
+}
+func CreateRefreshToken(body map[string]interface{}) (string, error) {
+	expirationTime := utils.GetEnvInt("refreshExpirationTimeDays", 30)
+	expirationTimeUnix := time.Now().Add(time.Duration(expirationTime) * 24 * time.Hour)
+	return createToken(body,expirationTimeUnix, []byte(os.Getenv("secretKeyRefresh")))
 }
 
 func Validate(tokenString string, secretKey string) (*jwt.Token, error) {
