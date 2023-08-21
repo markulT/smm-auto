@@ -15,7 +15,7 @@ func (e EmailReadingError)Error() string {
 	return e.Message
 }
 
-func createAccessToken(body map[string]interface{}) (string, error) {
+func CreateAccessToken(body map[string]interface{}) (string, error) {
 	token := jwt.New(jwt.SigningMethodHS256)
 	claims := token.Claims.(jwt.MapClaims)
 	for key, value := range body {
@@ -33,7 +33,7 @@ func createAccessToken(body map[string]interface{}) (string, error) {
 	return signedToken, nil
 }
 
-func validate(tokenString string, secretKey string) (*jwt.Token, error) {
+func Validate(tokenString string, secretKey string) (*jwt.Token, error) {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
 	})
@@ -46,7 +46,7 @@ func validate(tokenString string, secretKey string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func getSubject(tokenString string, secretKey string) (string, error)  {
+func GetSubject(tokenString string, secretKey string) (string, error)  {
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
 	})

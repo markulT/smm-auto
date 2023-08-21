@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golearn/models"
 	"golearn/utils"
+	"golearn/utils/auth"
 	"golearn/utils/jsonHelper"
 )
 
@@ -38,10 +39,22 @@ func signup(c *gin.Context) {
 		password string
 	}
 	jsonHelper.BindWithException(body, c)
+
 	if userExists := utils.DB.Where("email = ?", body.email).First(&models.User{}); userExists!=nil {
 		c.JSON(400, gin.H{"error":"User already exists"})
 		return
 	}
-	newUser := models.User{Email: body.email, Password: body.password}
 
+	newUser := models.User{Email: body.email, Password: body.password}
+	token, err := auth.CreateAccessToken(map[string]interface{}{
+		"email":    newUser.Email,
+		"password": newUser.Password,
+	})
+	if err != nil {
+		return
+	}
+	utils.DB.Save(newUser)
+	c.JSON(200, gin.H{
+		"accessToken": token,
+	})
 }
