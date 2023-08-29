@@ -11,14 +11,14 @@ func init() {
 	utils.ConnectToDb()
 }
 
-
-
 func main() {
 	r := gin.Default()
 
 	controllers.SetupAuthRoutes(r)
 	controllers.SetupTelegramRoutes(r)
 	controllers.SetupBotRoutes(r)
+
+	go utils.FetchAndProcessPosts()
+
 	r.Run()
 }
-

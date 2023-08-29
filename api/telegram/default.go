@@ -24,22 +24,22 @@ func GetMe() {
 }
 
 type SendMessageRequest struct {
-	Text string `json:"text"`
-	ParseMode string `json:"parse_mode"`
-	DisableWebPagePreview bool `json:"disable_web_page_preview"`
-	DisableNotification bool `json:"disable_notification"`
-	ReplyToMessage string `json:"reply_to_message"`
-	ChatId string `json:"chat_id"`
+	Text                  string `json:"text"`
+	ParseMode             string `json:"parse_mode"`
+	DisableWebPagePreview bool   `json:"disable_web_page_preview"`
+	DisableNotification   bool   `json:"disable_notification"`
+	ReplyToMessage        string `json:"reply_to_message"`
+	ChatId                string `json:"chat_id"`
 }
 
-func SendMessage(text string) {
+func SendMessage(text string, chatId string) {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMessage"
 	sendMessageRequest := SendMessageRequest{
 		Text:                  "" + text + "",
 		DisableWebPagePreview: false,
 		DisableNotification:   false,
 		ReplyToMessage:        "",
-		ChatId:                "@smm_auto_test",
+		ChatId:                chatId,
 	}
 	//payload := strings.NewReader("{\"text\":\"Хочу присоромити одну дамочку\",\"parse_mode\":\"Optional\",\"disable_web_page_preview\":false,\"disable_notification\":false,\"reply_to_message_id\":null,\"chat_id\":\"@smm_auto_test\"}")
 	jsonData, _ := json.Marshal(sendMessageRequest)
