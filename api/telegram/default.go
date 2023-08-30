@@ -119,18 +119,18 @@ func SendMediaGroupLinks(links []string,caption string) (message string, err err
 	return "success", nil
 }
 
-func SendMediaGroup(files []*multipart.FileHeader, caption string) (message string, err error) {
+func SendMediaGroup(files []*multipart.FileHeader, caption string) (message string, err error)  {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMediaGroup"
-	fmt.Println(url)
-	var media []map[string]interface{}
+
+	var media = "["
 
 	body := &bytes.Buffer{}
 	writer := multipart.NewWriter(body)
 	defer writer.Close()
 
-
-	for _, file := range files {
-		imageField, err := writer.CreateFormFile(file.Filename, file.Filename)
+	for index, file := range files {
+		fieldName := fmt.Sprintf("image%d", index)
+		imageField, err := writer.CreateFormFile(fieldName, file.Filename)
 		if err != nil {
 			return "", err
 		}
@@ -144,36 +144,33 @@ func SendMediaGroup(files []*multipart.FileHeader, caption string) (message stri
 			return "", err
 		}
 	}
-
-	for _, file := range files {
-		// Create a media object for the image
+	for index, file := range files {
 		fmt.Println(file.Filename)
-		media = append(media, map[string]interface{}{
-			"type":  "photo",
-			"media": "attach://" + file.Filename,
-		})
-	}
-	//requestBody := map[string]interface{}{
-	//	"chat_id": "@smm_auto_test",
-	//	"media":   media,
-	//}
+		//media = append(media, map[string]interface{}{
+		//	"type":  "photo",
+		//	"media": "attach://" + file.Filename,
+		//})
 
-	jsonBody, err := json.Marshal(media)
-	fmt.Println(string(jsonBody))
-	writer.WriteField("media", string(jsonBody))
+		newMedia := fmt.Sprintf(`{"type":"photo", "media":"attach://image%d"}, `,index)
+		media += newMedia
+		if index == len(files)-1 {
+			media = media[:len(media)-2]
+			media += "]"
+		}
+	}
 	writer.WriteField("chat_id", "@smm_auto_test")
-	if err != nil {
-		return "", err
-	}
-
+	writer.WriteField("media", media)
 	req, err := http.NewRequest("POST", url, body)
 	if err != nil {
 		fmt.Println(err)
 		return "", err
 	}
-	req.Header.Set("Content-Type", writer.FormDataContentType())
-	fmt.Println("res will be here")
-	res, err := http.DefaultClient.Do(req)
+	req.Header.Set("Content-Type","multipart/form-data")
+	fmt.Println(req)
+	client := &http.Client{}
+	res, err := client.Do(req)
+	fmt.Println(res.Status)
+	fmt.Println(res.StatusCode)
 	fmt.Println("response is here")
 	if err!=nil {
 		fmt.Println(err)
@@ -184,7 +181,75 @@ func SendMediaGroup(files []*multipart.FileHeader, caption string) (message stri
 	fmt.Println("response body : ")
 	fmt.Println(string(resBody))
 	return "success", nil
+
 }
+
+//func SendMediaGroup(files []*multipart.FileHeader, caption string) (message string, err error) {
+//	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMediaGroup"
+//	fmt.Println(url)
+//	var media []map[string]interface{}
+//
+//	body := &bytes.Buffer{}
+//	writer := multipart.NewWriter(body)
+//	defer writer.Close()
+//
+//
+//	for _, file := range files {
+//		imageField, err := writer.CreateFormFile(file.Filename, file.Filename)
+//		if err != nil {
+//			return "", err
+//		}
+//		src, err := file.Open()
+//		if err != nil {
+//			return "", err
+//		}
+//		defer src.Close()
+//		_, err = io.Copy(imageField, src)
+//		if err != nil {
+//			return "", err
+//		}
+//	}
+//
+//	for _, file := range files {
+//		// Create a media object for the image
+//		fmt.Println(file.Filename)
+//		media = append(media, map[string]interface{}{
+//			"type":  "photo",
+//			"media": "attach://" + file.Filename,
+//		})
+//	}
+//	//requestBody := map[string]interface{}{
+//	//	"chat_id": "@smm_auto_test",
+//	//	"media":   media,
+//	//}
+//
+//	jsonBody, err := json.Marshal(media)
+//	fmt.Println(string(jsonBody))
+//	writer.WriteField("media", string(jsonBody))
+//	writer.WriteField("chat_id", "@smm_auto_test")
+//	if err != nil {
+//		return "", err
+//	}
+//
+//	req, err := http.NewRequest("POST", url, body)
+//	if err != nil {
+//		fmt.Println(err)
+//		return "", err
+//	}
+//	req.Header.Set("Content-Type", writer.FormDataContentType())
+//	fmt.Println("res will be here")
+//	res, err := http.DefaultClient.Do(req)
+//	fmt.Println("response is here")
+//	if err!=nil {
+//		fmt.Println(err)
+//		return
+//	}
+//	defer res.Body.Close()
+//	resBody, _ := io.ReadAll(res.Body)
+//	fmt.Println("response body : ")
+//	fmt.Println(string(resBody))
+//	return "success", nil
+//}
 
 func SendPhoto(file *multipart.FileHeader, caption string) (message string, err error) {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendPhoto"
