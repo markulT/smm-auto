@@ -13,4 +13,5 @@ type Post struct {
 	ChannelName string
 	Username    string
 	Status      string
+	Type        string
 }
