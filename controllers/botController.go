@@ -53,7 +53,7 @@ func sendMediaGroupHandler(c *gin.Context) {
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["photo"]
 	caption := multipart.Value["caption"]
-	_, err := telegram.SendMediaGroup(files, caption[0])
+	_, err := telegram.SendMediaGroupLazy(files, caption[0])
 	if err!= nil {
 		c.JSON(500, gin.H{"error":err})
 	}
