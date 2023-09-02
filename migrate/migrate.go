@@ -10,6 +10,7 @@ func init() {
 	utils.ConnectToDb()
 }
 
-func main()  {
+func main() {
 	utils.DB.AutoMigrate(&models.User{})
+	utils.DB.AutoMigrate(&models.Post{})
 }
