@@ -1,12 +1,17 @@
 package models
 
 import (
-	"gorm.io/gorm"
+	"time"
 )
 
 type User struct {
-	gorm.Model
-	//ID       uuid.UUID `gorm:"type:uuid;default:uuid_generate_v4()"`
-	Email    string `gorm:"unique"`
+	ID        uint
+	CreatedAt time.Time
+	UpdatedAt time.Time
+	Email    string
 	Password string
+	ChannelList []byte
+	SubscriptionID string
+	SubscriptionType string
 }
+

@@ -364,24 +364,24 @@ func SendMediaGroupLazy(files []*multipart.FileHeader, caption string) (string, 
 //	return "success", nil
 //}
 
-
-func SendPhoto(file *multipart.FileHeader, caption string) (message string, err error) {
+// SendPhoto TODO: Remake this shit into using io.Reader instead of *multipart.File
+func SendPhoto(src *multipart.File, caption string, fileName string) (message string, err error) {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendPhoto"
 	fmt.Println(url)
-	src, err := file.Open()
+
 	if err!=nil {
 		return "", err
 	}
-	defer src.Close()
+
 
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
-	imageField, err := writer.CreateFormFile("photo",file.Filename)
+	imageField, err := writer.CreateFormFile("photo",fileName)
 	if err!=nil {
 		fmt.Println(err)
 		return "", err
 	}
-	_, err = io.Copy(imageField, src)
+	_, err = io.Copy(imageField, *src)
 	if err!=nil {
 		fmt.Println(err)
 		return "", nil
@@ -684,7 +684,6 @@ func SendVenue(latitude string, longitude string, title string, address string, 
 		FoursquareId: "16015",
 		ChatId:       chatId,
 	}
-	//payload := strings.NewReader("{\"text\":\"Хочу присоромити одну дамочку\",\"parse_mode\":\"Optional\",\"disable_web_page_preview\":false,\"disable_notification\":false,\"reply_to_message_id\":null,\"chat_id\":\"@smm_auto_test\"}")
 	jsonData, _ := json.Marshal(sendMessageRequest)
 	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
 

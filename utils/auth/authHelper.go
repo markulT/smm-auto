@@ -3,15 +3,15 @@ package auth
 import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
-	"golearn/models"
-	"golearn/utils"
+	"golearn/repository"
 	"net/http"
 )
 
 func UserExists(email string, c *gin.Context) {
-	var count int64
-	utils.DB.Model(&models.User{}).Where("email = ?", email).Count(&count)
-	if count > 0 {
+	//var count int64
+	//utils.DB.Model(&models.User{}).Where("email = ?", email).Count(&count)
+	_, err := repository.GetUserByEmail(email)
+	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
 		c.Abort()
 		return

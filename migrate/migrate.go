@@ -13,4 +13,6 @@ func init() {
 func main() {
 	utils.DB.AutoMigrate(&models.User{})
 	utils.DB.AutoMigrate(&models.Post{})
+	utils.DB.AutoMigrate(&models.File{})
+	utils.DB.Debug().AutoMigrate(&models.ScheduledPost{})
 }

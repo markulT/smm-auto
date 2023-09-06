@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golearn/api/telegram"
 	"golearn/models"
-	"golearn/utils"
+	"golearn/repository"
 )
 
 func SetupBotRoutes(r *gin.Engine) {
@@ -22,7 +22,7 @@ func SetupBotRoutes(r *gin.Engine) {
 	botGroup.POST("/sendVideoNote", sendVideoNoteHandler)
 	botGroup.POST("/sendLocation", sendLocationHandler)
 	botGroup.POST("/sendVenue", sendVenueHandler)
-	botGroup.DELETE("/delete/:id", postDelete)
+	//botGroup.DELETE("/delete/:id", postDelete)
 }
 
 func getMeHandler(c *gin.Context) {
@@ -43,23 +43,13 @@ func sendMessageHandler(c *gin.Context) {
 		return
 	}
 
-	fmt.Println(body.Text)
-	fmt.Println(body.Scheduled)
-	fmt.Println(body.TimeZone)
-	fmt.Println(body.ChannelName)
-	fmt.Println(body.Username)
-
 	newPost := models.Post{
 		Text:        body.Text,
-		Scheduled:   body.Scheduled,
-		Username:    body.Username,
 		ChannelName: body.ChannelName,
-		TimeZone:    body.TimeZone,
-		Status:      "scheduled",
 		Type:        "message",
 	}
 
-	if err := utils.DB.Create(&newPost).Error; err != nil {
+	if err := repository.SavePost(&newPost); err != nil {
 		c.JSON(400, gin.H{"message": "Error scheduling post"})
 		return
 	}
@@ -200,23 +190,31 @@ func sendVenueHandler(c *gin.Context) {
 	})
 }
 
-func postDelete(c *gin.Context) {
-
-	id := c.Param("id")
-
-	utils.DB.Delete(&models.Post{}, id)
-
-	c.JSON(200, gin.H{
-		"statusCode": "success",
-	})
-}
+//func postDelete(c *gin.Context) {
+//
+//	id := c.Param("id")
+//
+//	utils.DB.Delete(&models.Post{}, id)
+//
+//	c.JSON(200, gin.H{
+//		"statusCode": "success",
+//	})
+//}
 func sendPhotoHandler(c *gin.Context) {
 
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["photo"]
 	caption := multipart.Value["caption"]
 	for _, file := range files {
-		telegram.SendPhoto(file, caption[0])
+		of, err := file.Open()
+		if err != nil {
+			c.
+				JSON(400, gin.H{"error":err})
+			c.Abort()
+			return
+		}
+		defer of.Close()
+		telegram.SendPhoto(of, caption[0], file.Filename)
 	}
 	c.JSON(200, gin.H{"aboba":"aboba"})
 }

@@ -5,7 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"golearn/models"
-	"golearn/utils"
+	"golearn/repository"
 	"golearn/utils/auth"
 	"golearn/utils/jsonHelper"
 	"os"
@@ -24,7 +24,6 @@ type LoginRequestBody struct {
 }
 
 func login(c *gin.Context) {
-	fmt.Println("Login request is here")
 	var body struct{
 		Email string `json:"email"`
 		Password string `json:"password"`
@@ -32,14 +31,13 @@ func login(c *gin.Context) {
 
 	jsonHelper.BindWithException(&body, c)
 
-	var userExists models.User
-	err := utils.DB.Where("email = ?", body.Email).First(&userExists).Error
+
+	_, err := repository.GetUserByEmail(body.Email)
 	if err!=nil {
 		c.JSON(404, gin.H{"error":"user does not exist"})
 		return
 	}
 	var userFromDB models.User
-	utils.DB.Where("email = ?", body.Email).First(&userFromDB)
 	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(body.Password));err!=nil {
 		c.JSON(403, gin.H{"error":"Wrong pass"})
 		c.Abort()
@@ -72,7 +70,12 @@ func refresh(c *gin.Context) {
 	}
 	fmt.Println("Email is : ")
 	fmt.Println(email)
-	utils.DB.Where("email = ?", email).First(&userFromDb)
+	userFromDb, err = repository.GetUserByEmail(email)
+	if err!=nil {
+		c.JSON(400, gin.H{"message":err})
+		c.Abort()
+		return
+	}
 	if _, err := auth.Validate(body.RefreshToken, secretKey);err!=nil {
 		c.JSON(400, gin.H{"message":err})
 		c.Abort()
@@ -106,7 +109,7 @@ func signup(c *gin.Context) {
 		"email":    newUser.Email,
 	}, c)
 
-	if err := utils.DB.Create(&newUser).Error; err!=nil {
+	if err := repository.SaveUser(&newUser); err!=nil {
 		c.JSON(400, gin.H{"message":"Error creating user"})
 		return
 	}
