@@ -3,20 +3,17 @@ package s3
 import (
 	"bytes"
 	"context"
-	"fmt"
 	"github.com/minio/minio-go/v7"
 	"github.com/minio/minio-go/v7/pkg/credentials"
 	"io"
 	"log"
 	"mime/multipart"
 	"os"
-	"strings"
 )
 
 var MinioClient *minio.Client
 
 func ConnectToMinio()  {
-	fmt.Println("Connecting to minio")
 	var err error
 
 	endpoint := os.Getenv("minioUrl")
@@ -27,6 +24,39 @@ func ConnectToMinio()  {
 		Creds: credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: false,
 	})
+	imageBucketName := os.Getenv("imageBucketName")
+	imageBucketExists, err := MinioClient.BucketExists(context.Background(), imageBucketName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !imageBucketExists {
+		err = MinioClient.MakeBucket(context.Background(), imageBucketName, minio.MakeBucketOptions{})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	mediaGroupBucketName := os.Getenv("mediaGroupBucketName")
+	mediaGroupBucketExists ,err := MinioClient.BucketExists(context.Background(), mediaGroupBucketName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !mediaGroupBucketExists {
+		err = MinioClient.MakeBucket(context.Background(), mediaGroupBucketName, minio.MakeBucketOptions{})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+	videoBucketName := os.Getenv("videoBucketName")
+	videoBucketExists ,err := MinioClient.BucketExists(context.Background(), videoBucketName)
+	if err != nil {
+		log.Fatal(err)
+	}
+	if !videoBucketExists {
+		err = MinioClient.MakeBucket(context.Background(), videoBucketName, minio.MakeBucketOptions{})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -64,41 +94,35 @@ func LoadMultipartFile(ctx context.Context, bucketName string, objectName string
 	return nil
 }
 
-func GetFile(ctx context.Context, bucketName, objectName string) (*os.File, error) {
-
-	reader, err := MinioClient.GetObject(ctx, bucketName, objectName, minio.GetObjectOptions{})
-	if err != nil {
-		return nil, err
-	}
+func GetFile(bucketName string, objectName string) (io.Reader, error) {
+	var buffer bytes.Buffer
+	reader ,err := MinioClient.GetObject(context.Background(), bucketName, objectName, minio.GetObjectOptions{})
 	defer reader.Close()
-
-	var buffer strings.Builder
-	_, err = io.Copy(&buffer, reader)
 	if err != nil {
 		return nil, err
 	}
-	file, err := os.CreateTemp("", "minio_file_")
+	_,err = io.Copy(&buffer, reader)
 	if err != nil {
 		return nil, err
 	}
-	defer file.Close()
-
-	_, err = file.WriteString(buffer.String())
-	if err != nil {
-		return nil, err
-	}
-
-	_, err = file.Seek(0, io.SeekStart)
-	if err != nil {
-		return nil, err
-	}
-
-	return file, nil
+	fileReader := &buffer
+	return fileReader, nil
 }
-func GetMultipartFile(ctx context.Context, bucketName, objectName string) (*multipart.File, error) {
-	reader, err := MinioClient.GetObject(ctx, bucketName, objectName, minio.GetObjectOptions{})
+
+func DeleteFile(bucketName, objectName string) error {
+
+	err := MinioClient.RemoveObject(context.Background(), bucketName, objectName, minio.RemoveObjectOptions{})
 	if err != nil {
-		return
+		return err
 	}
-	multipart.File(reade)
+	return nil
+
 }
+
+//func GetMultipartFile(ctx context.Context, bucketName, objectName string) (*multipart.File, error) {
+//	reader, err := MinioClient.GetObject(ctx, bucketName, objectName, minio.GetObjectOptions{})
+//	if err != nil {
+//		return
+//	}
+//	multipart.File(reade)
+//}

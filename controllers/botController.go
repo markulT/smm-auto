@@ -6,6 +6,10 @@ import (
 	"golearn/api/telegram"
 	"golearn/models"
 	"golearn/repository"
+	"golearn/utils/videoCompress"
+	"io"
+	"os"
+	"path/filepath"
 )
 
 func SetupBotRoutes(r *gin.Engine) {
@@ -81,13 +85,68 @@ func sendVoiceHandler(c *gin.Context) {
 }
 
 func sendVideoHandler(c *gin.Context) {
+	fmt.Println("aboba")
 	multipart, _ := c.MultipartForm()
-	files := multipart.File["video"]
+	files := multipart.File["file"]
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
-	for _, file := range files {
-		telegram.SendVideo(file, caption[0], channelName[0])
+	//filename, err := uuid.NewRandom()
+	//if err != nil {
+	//	c.JSON(400, gin.H{"error":err})
+	//	c.Abort()
+	//	return
+	//}
+	fmt.Println(files[0].Size)
+	if files[0].Size > 48 * 1024 * 1024 {
+		fmt.Println("bigger while")
+		compressedFileInfo, err := videoCompress.CompressFileToSize(files[0], "aboba", int64(48 * 1024 * 1024))
+		if err != nil {
+			c.JSON(400, gin.H{"error":err})
+			c.Abort()
+			return
+		}
+		of, err := os.Open(filepath.Join("C:/", compressedFileInfo.CompressedFilename))
+		if err != nil {
+			c.JSON(400, gin.H{"error":err})
+			c.Abort()
+			return
+		}
+
+		_, err = telegram.SendVideo(of, caption[0], channelName[0], compressedFileInfo.CompressedFilename)
+		//defer compressedFileInfo.Reader.Close()
+		if err != nil {
+			c.JSON(400, gin.H{"error":err})
+			c.Abort()
+			return
+		}
+		of.Close()
+		err = videoCompress.CleanupCompressedFile(filepath.Join("C:/", compressedFileInfo.CompressedFilename))
+		if err != nil {
+			c.JSON(400, gin.H{"error":err})
+			c.Abort()
+			return
+		}
+	} else {
+		fmt.Println("small file")
+		fmt.Println(files[0].Filename)
+		of, err := files[0].Open()
+		if err != nil {
+			c.JSON(400, gin.H{"error":err})
+			c.Abort()
+			return
+		}
+		reader := io.Reader(of)
+		fmt.Println(caption[0])
+		fmt.Println(channelName[0])
+		_, err = telegram.SendVideoBytes(reader, files[0].Filename, caption[0], channelName[0])
+		if err != nil {
+			c.JSON(400, gin.H{"error":err})
+			c.Abort()
+			return
+		}
+		of.Close()
 	}
+
 	c.JSON(200, gin.H{"message": "success"})
 }
 
@@ -208,8 +267,7 @@ func sendPhotoHandler(c *gin.Context) {
 	for _, file := range files {
 		of, err := file.Open()
 		if err != nil {
-			c.
-				JSON(400, gin.H{"error":err})
+			c.JSON(400, gin.H{"error":err})
 			c.Abort()
 			return
 		}
@@ -219,13 +277,29 @@ func sendPhotoHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"aboba":"aboba"})
 }
 func sendMediaGroupHandler(c *gin.Context) {
-	fmt.Println("in request")
 	multipart, _ := c.MultipartForm()
-	files := multipart.File["photo"]
+	files := multipart.File["media"]
 	caption := multipart.Value["caption"]
-	_, err := telegram.SendMediaGroupLazy(files, caption[0])
+	var filenames []string
+	var fileList []*io.Reader
+	for _, file := range files {
+		of, err := file.Open()
+		if err != nil {
+			c.JSON(400, gin.H{"error":err})
+			c.Abort()
+			return
+		}
+		defer of.Close()
+		readerPtr := io.Reader(of)
+		fileList = append(fileList, &readerPtr)
+		filenames = append(filenames, file.Filename)
+	}
+	//_, err := telegram.SendMediaGroupLazy(files, caption[0])
+	_, err := telegram.SendMediaGroup(fileList, filenames, caption[0])
 	if err!= nil {
 		c.JSON(500, gin.H{"error":err})
+		c.Abort()
+		return
 	}
 	c.JSON(200, gin.H{"message":"success"})
 }

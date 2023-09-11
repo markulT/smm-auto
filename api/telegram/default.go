@@ -12,44 +12,6 @@ import (
 	"os"
 )
 
-//func SendMediaGroup(files []*multipart.FileHeader, caption string) (string, error) {
-//	requestUrl := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/getMe"
-//	var requestBody bytes.Buffer
-//	writer:=multipart.NewWriter(&requestBody)
-//	for index, file := range files {
-//		src, err := file.Open()
-//		if err!=nil {
-//			return "", err
-//		}
-//		defer src.Close()
-//		fileField, err := writer.CreateFormFile(fmt.Sprintf("image%d", index), file.Filename)
-//		_, err = io.Copy(fileField, src)
-//		if err != nil {
-//			return "", err
-//		}
-//	}
-//	writer.WriteField("chat_id", "@smm_auto_test")
-//	writer.WriteField("media", `[{"type":"photo", "media":"attach://image0"}, {"type":"photo", "media":"attach://image1"}]`)
-//	defer writer.Close()
-//	req, err := http.NewRequest("POST", requestUrl, &requestBody)
-//	if err != nil {
-//		fmt.Println("Error creating request:", err)
-//		return "", err
-//	}
-//	req.Header.Set("Content-Type", "multipart/form-data")
-//	client := &http.Client{}
-//	res, err := client.Do(req)
-//	fmt.Println(res)
-//	fmt.Println(res.Status)
-//	fmt.Println(res.StatusCode)
-//
-//	if err != nil {
-//		fmt.Println("Error sending request:", err)
-//		return "", err
-//	}
-//	defer res.Body.Close()
-//	return "a", nil
-//}
 
 func GetMe() {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/getMe"
@@ -140,7 +102,7 @@ func SendDice()  {
 	fmt.Println(string(body))
 }
 
-func SendMediaGroupLinks(links []string,caption string) (message string, err error) {
+func SendMediaGroupLinks(links []string, caption string) (message string, err error) {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMediaGroup"
 
 	var media []map[string]interface{}
@@ -180,42 +142,31 @@ func SendMediaGroupLinks(links []string,caption string) (message string, err err
 	return "success", nil
 }
 
-type NamedReaderCloser struct {
-	io.Reader
-	multipart.FileHeader
-}
-
-func (c *NamedReaderCloser) Name() string {
-	return c.FileHeader.Filename
-}
 
 type CustomReader struct {
-	file multipart.File
+	reader io.Reader
+	filename string
 }
 
 func (cr *CustomReader) Read(p []byte) (n int, err error) {
-	return cr.file.Read(p)
+	return cr.reader.Read(p)
 }
 
-func SendMediaGroupLazy(files []*multipart.FileHeader, caption string) (string, error) {
+
+func (cnr *CustomReader) Name() string {
+	return cnr.filename
+}
+
+func SendMediaGroup(files []*io.Reader,filenames[]string, caption string) (string, error) {
 	bot, err := telego.NewBot(os.Getenv("botToken"), telego.WithDefaultDebugLogger())
 	if err != nil {
 		return "", err
 	}
 	var mediaItems []telego.InputMedia
-	for index, file := range files {
-		src, err := file.Open()
-		defer src.Close()
-		if err != nil {
-			return "", err
-		}
-		customReader := &CustomReader{file: src}
-		closer := NamedReaderCloser{
-			Reader: customReader,
-			FileHeader: *file,
-		}
+	for index,file := range files {
+		customReader := &CustomReader{reader:*file,filename: filenames[index]}
 		media := telegoutil.MediaPhoto(telego.InputFile{
-			File: &closer,
+			File: customReader,
 		})
 		if index == 0 {
 			media = media.WithCaption(caption)
@@ -224,148 +175,10 @@ func SendMediaGroupLazy(files []*multipart.FileHeader, caption string) (string, 
 	}
 	mdGroup := telegoutil.MediaGroup(telegoutil.Username("@smm_auto_test"), mediaItems...)
 	_, _ = bot.SendMediaGroup(mdGroup)
-	return "success", nil
+	return "", nil
 }
 
-//func SendMediaGroup(files []*multipart.FileHeader, caption string) (string, error) {
-//	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMediaGroup"
-//
-//	request := gorequest.New().Type("multipart").AppendHeader("Content-Type", "multipart/form-data")
-//
-//	var requestBody bytes.Buffer
-//	multipartWriter := multipart.NewWriter(&requestBody)
-//
-//	var mediaData []map[string]interface{}
-//
-//	for index, file := range files {
-//		src, err := file.Open()
-//		if err != nil {
-//			return "", err
-//		}
-//		defer src.Close()
-//
-//		request.SendFile(src, file.Filename, fmt.Sprintf("image%d", index))
-//
-//		mediaItem := map[string]interface{}{
-//			"type":  "photo",
-//			"media": fmt.Sprintf("attach://image%d", index),
-//		}
-//		mediaData = append(mediaData, mediaItem)
-//	}
-//
-//
-//	formData := map[string]string{
-//		"chat_id": "@smm_auto_test",
-//		"media": "[{\"type\":\"photo\", \"media\":\"attach://image0\"}, {\"media\":\"attach://image1\", \"type\":\"photo\"}]",
-//	}
-//	fmt.Println(formData)
-//
-//	for key, value := range formData {
-//		_ = multipartWriter.WriteField(key, value)
-//	}
-//
-//	multipartWriter.Close()
-//	fmt.Println(requestBody.String())
-//	_, body, errs := request.
-//		SendString(requestBody.String()).
-//		Post(url).
-//		End()
-//
-//	if errs != nil {
-//		fmt.Println("Error performing request:", errs)
-//		return "", errs[0]
-//	}
-//	fmt.Println("Response body:", body)
-//	return body, nil
-//}
-
-//func SendMediaGroup(files []*multipart.FileHeader, caption string) (message string, err error)  {
-//	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMediaGroup"
-//	client := resty.New()
-//	req := client.R()
-//
-//	var formData = map[string]string{
-//		"chat_id":"@smm_auto_test",
-//		"media":"[{\"type\":\"photo\", \"media\":\"attach://image0\"}, {\"type\":\"photo\", \"media\":\"attach://image1\"}]",
-//	}
-//	request:= gorequest.New().Type("multipart")
-//	for index, file := range files {
-//		src, err := file.Open()
-//		if err!=nil {
-//			return "", err
-//		}
-//		var fileBuf bytes.Buffer
-//		_, _ = io.Copy(&fileBuf, src)
-//		req.SetFileReader(fmt.Sprintf("image%d", index), file.Filename, bytes.NewReader(fileBuf.Bytes()))
-//		request.SendFile(fileBuf.Bytes(), file.Filename, fmt.Sprintf("image%d", index))
-//	}
-//	req.SetFormData(formData)
-//	fmt.Println(req)
-//	res, _, errrr := request.Send(formData).Post(url).End(func(response gorequest.Response, body string, errs []error){
-//		if response.StatusCode != 200 {
-//			fmt.Println("Error:", response.Status)
-//		} else {
-//			fmt.Println("Success:", response.Status)
-//		}
-//	})
-//	if errrr!=nil {
-//		return "", err
-//	}
-//
-//	fmt.Println(res)
-//
-//	return "", nil
-//}
-
-//func SendMediaGroup(files []*multipart.FileHeader, caption string) (message string, err error)  {
-//	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMediaGroup"
-//	client:=resty.New()
-//	var media = "["
-//
-//	body := &bytes.Buffer{}
-//	writer := multipart.NewWriter(body)
-//	defer writer.Close()
-//
-//	for index, file := range files {
-//		fieldName := fmt.Sprintf("image%d", index)
-//		imageField, err := writer.CreateFormFile(fieldName, file.Filename)
-//		if err != nil {
-//			return "", err
-//		}
-//		src, err := file.Open()
-//		if err != nil {
-//			return "", err
-//		}
-//		defer src.Close()
-//		_, err = io.Copy(imageField, src)
-//		if err != nil {
-//			return "", err
-//		}
-//	}
-//	for index, _ := range files {
-//		newMedia := fmt.Sprintf(`{"type":"photo", "media":"attach://image%d"}, `,index)
-//		media += newMedia
-//		if index == len(files)-1 {
-//			media = media[:len(media)-2]
-//			media += "]"
-//		}
-//	}
-//	_ = writer.WriteField("chat_id", "@smm_auto_test")
-//	_ = writer.WriteField("media", media)
-//	fmt.Println(string(body.Bytes()))
-//	req:= client.R().SetBody(body.Bytes()).SetHeader("Content-Type", "multipart/form-data")
-//
-//	res, err := req.Post(url)
-//	fmt.Println("response is ...")
-//	fmt.Println(res.Status())
-//	fmt.Println(res.String())
-//	fmt.Println(string(res.Body()))
-//
-//	return "success", nil
-//}
-
-// SendPhoto TODO: Remake this shit into using io.Reader instead of *multipart.File
-func SendPhoto(src *multipart.File, caption string, fileName string) (message string, err error) {
+func SendPhoto(src io.Reader, caption string, fileName string) (message string, err error) {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendPhoto"
 	fmt.Println(url)
 
@@ -381,7 +194,7 @@ func SendPhoto(src *multipart.File, caption string, fileName string) (message st
 		fmt.Println(err)
 		return "", err
 	}
-	_, err = io.Copy(imageField, *src)
+	_, err = io.Copy(imageField, src)
 	if err!=nil {
 		fmt.Println(err)
 		return "", nil
@@ -515,44 +328,40 @@ func SendVoice(file *multipart.FileHeader, caption string, chatId string) (messa
 	return "success", nil
 }
 
-func SendVideo(file *multipart.FileHeader, caption string, chatId string) (message string, err error) {
+func SendVideo(file *os.File, caption string, chatId string, filename string) (string, error) {
+	fmt.Println("sending video")
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVideo"
-	fmt.Println(url)
-	src, err := file.Open()
-	if err != nil {
-		return "", err
-	}
-	defer src.Close()
+
 
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
-	imageField, err := writer.CreateFormFile("video", file.Filename)
+
+	imageField, err := writer.CreateFormFile("video", filename)
 	if err != nil {
-		fmt.Println(err)
 		return "", err
 	}
-	_, err = io.Copy(imageField, src)
+
+	_, err = io.Copy(imageField, file)
 	if err != nil {
+		fmt.Println(
+			"error copying huynia")
 		fmt.Println(err)
-		return "", nil
+		return "", err
 	}
 	_ = writer.WriteField("chat_id", chatId)
 	_ = writer.WriteField("caption", caption)
 	err = writer.Close()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return  "",err
 	}
 	req, err := http.NewRequest("POST", url, &requestBody)
 	if err != nil {
-		fmt.Println(err)
 		return "", err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
 	res, err := http.DefaultClient.Do(req)
 	if err != nil {
-		fmt.Println(err)
-		return
+		return "", err
 	}
 	defer res.Body.Close()
 	body, _ := io.ReadAll(res.Body)
@@ -560,49 +369,85 @@ func SendVideo(file *multipart.FileHeader, caption string, chatId string) (messa
 	fmt.Println(string(body))
 	return "success", nil
 }
-
-//func SendVideoNote(videoData []byte, chatId string) (message string, err error) {
-//	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVideoNote"
-//	fmt.Println(url)
+//func SendVideoBytes(file io.Reader, filename string, caption string, chatId string) (message string, err error) {
 //
+//	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVideo"
 //	var requestBody bytes.Buffer
 //	writer := multipart.NewWriter(&requestBody)
-//	videoField, err := writer.CreateFormFile("video_note", "video_note.mp4") // Provide a filename
-//	if err != nil {
-//		fmt.Println(err)
-//		return "", err
-//	}
-//	_, err = videoField.Write(videoData)
-//	if err != nil {
-//		fmt.Println(err)
-//		return "", err
-//	}
-//	_ = writer.WriteField("chat_id", chatId)
 //
-//	err = writer.Close()
+//	imageField, err := writer.CreateFormFile("video", filename)
 //	if err != nil {
-//		fmt.Println(err)
+//		return "", err
+//	}
+//	fmt.Println(file == nil)
+//	_, err = io.Copy(imageField, file)
+//	if err != nil {
+//		fmt.Println("error sending 1")
+//		fmt.Println(err.Error())
 //		return "", err
 //	}
 //
+//	err = writer.WriteField("chat_id", chatId)
+//	if err != nil {
+//		return "", err
+//	}
+//	err = writer.WriteField("caption", caption)
+//	if err != nil {
+//		return "", err
+//	}
+//	if err != nil {
+//		fmt.Println("error sending 0")
+//		return "", err
+//	}
+//
+//
+//	defer writer.Close()
 //	req, err := http.NewRequest("POST", url, &requestBody)
 //	if err != nil {
-//		fmt.Println(err)
+//		fmt.Println("error sending 2")
 //		return "", err
 //	}
 //	req.Header.Set("Content-Type", writer.FormDataContentType())
 //	res, err := http.DefaultClient.Do(req)
 //	if err != nil {
-//		fmt.Println(err)
-//		return "", err
+//		fmt.Println("error sending 3")
+//		return
 //	}
 //	defer res.Body.Close()
-//
 //	body, _ := io.ReadAll(res.Body)
 //	fmt.Println("response body : ")
 //	fmt.Println(string(body))
 //	return "success", nil
+//
 //}
+
+func SendVideoBytes(file io.Reader, filename string, caption string, chatId string) ( string, error) {
+	bot, err := telego.NewBot(os.Getenv("botToken"), telego.WithDefaultDebugLogger())
+	if err != nil {
+		return "",err
+	}
+	customReader := &CustomReader{
+		reader:   file,
+		filename: filename,
+	}
+	video := &telego.InputFile{
+		File: customReader,
+	}
+	_, err = bot.SendVideo(&telego.SendVideoParams{
+		ChatID:                   telego.ChatID{
+			Username: chatId,
+		},
+		Video:                    *video,
+		Caption:                  caption,
+	})
+
+	if err != nil {
+		return "",err
+	}
+	return "", nil
+}
+
+
 
 func SendVideoNote(file *multipart.FileHeader, chatId string) (message string, err error) {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVideoNote"

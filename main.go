@@ -5,7 +5,6 @@ import (
 	"golearn/controllers"
 	"golearn/utils"
 	"golearn/utils/s3"
-	"golearn/utils/scheduler"
 )
 
 func init() {
@@ -22,7 +21,7 @@ func main() {
 	controllers.SetupBotRoutes(r)
 	controllers.SetupScheduleRoutes(r)
 
-	go scheduler.FetchAndProcessPosts()
+	//go scheduler.FetchAndProcessPosts()
 
 	r.Run()
 }

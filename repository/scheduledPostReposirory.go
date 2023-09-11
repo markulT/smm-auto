@@ -59,16 +59,20 @@ func DeleteScheduledPostById(spId uuid.UUID) error {
 	return nil
 }
 
-func SavePhoto(post *models.Post) (uuid.UUID, error) {
+func SaveScheduledPost(post *models.Post) error {
 	postCollection := utils.DB.Collection("posts")
-	res, err := postCollection.InsertOne(context.Background(), post)
+	_, err := postCollection.InsertOne(context.Background(), post)
 	if err != nil {
-		return uuid.UUID{}, err
+		return err
 	}
-	id, err := uuid.Parse(res.InsertedID.(string))
+	return nil
+}
+func UpdateFilesList(pId uuid.UUID, files []uuid.UUID) error {
+	postCollection := utils.DB.Collection("posts")
+	_, err := postCollection.UpdateByID(context.Background(), pId, bson.M{"$set":bson.M{"files":files}})
 	if err != nil {
-		return uuid.UUID{},err
+		return err
 	}
-	return id,nil
+	return nil
 }
 
