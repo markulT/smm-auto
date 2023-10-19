@@ -20,6 +20,9 @@ import (
 func SetupScheduleRoutes(r *gin.Engine)  {
 	scheduleGroup := r.Group("/schedule")
 
+	scheduleGroup.GET("/image/:imageName", jsonHelper.MakeHttpHandler(getPostImage) )
+	scheduleGroup.GET("/video/:videoName", jsonHelper.MakeHttpHandler(getPostsVideo) )
+
 	scheduleGroup.Use(auth.AuthMiddleware)
 
 	//scheduleGroup.Use(auth.SubscriptionMiddleware())
@@ -33,8 +36,35 @@ func SetupScheduleRoutes(r *gin.Engine)  {
 	scheduleGroup.GET("/", getScheduledPostHandler)
 	scheduleGroup.GET("/:id", jsonHelper.MakeHttpHandler(getPostHandler))
 	scheduleGroup.DELETE("/delete/:id", jsonHelper.MakeHttpHandler(deletePostHandler))
-	scheduleGroup.GET("/image/:imageName", jsonHelper.MakeHttpHandler(getPostImage) )
 	scheduleGroup.GET("/date/:scheduled", jsonHelper.MakeHttpHandler(getPostsByDate))
+}
+
+func getPostsVideo(c *gin.Context) error {
+	videoName, err := uuid.Parse(c.Param("videoName"))
+
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
+	}
+
+	image, err := s3.GetVideo(videoName.String())
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+	c.DataFromReader(200, -1, "application/octet-stream", image, nil)
+	return nil
 }
 
 func getPostsByDate(c *gin.Context) error {
@@ -90,23 +120,6 @@ func getPostsByDate(c *gin.Context) error {
 }
 
 func getPostImage(c *gin.Context) error {
-
-	postsRepo := mongoRepository.NewPostRepository()
-
-	authUserEmail, exists := c.Get("userEmail")
-	if !exists {
-		return jsonHelper.ApiError{
-			Err:    "User unauthorized",
-			Status: 401,
-		}
-	}
-	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
-	if err != nil {
-		return jsonHelper.ApiError{
-			Err:    err.Error(),
-			Status: 500,
-		}
-	}
 	imageName, err := uuid.Parse(c.Param("imageName"))
 
 	if err != nil {
@@ -115,16 +128,13 @@ func getPostImage(c *gin.Context) error {
 			Status: 400,
 		}
 	}
-	post ,err := postsRepo.GetPostByImageName(context.Background(), imageName)
-	if user.ID.String() != post.ID.String() {
-
-	}
-	if err != nil {
-		return jsonHelper.ApiError{
-			Err:    err.Error(),
-			Status: 500,
-		}
-	}
+	//post ,err := postsRepo.GetPostByImageName(context.Background(), imageName)
+	//if err != nil {
+	//	return jsonHelper.ApiError{
+	//		Err:    err.Error(),
+	//		Status: 500,
+	//	}
+	//}
 
 	image, err := s3.GetImage(imageName.String())
 	if err != nil {

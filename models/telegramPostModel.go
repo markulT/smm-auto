@@ -12,8 +12,8 @@ type Post struct {
 	Title        string `bson:"title" json:"title"`
 	ChannelName string `bson:"channelName" json:"chat"`
 	Type        string `bson:"type" json:"type"`
-	UserID		uuid.UUID `bson:"userId" bson:"userId"`
-	Files 		[]uuid.UUID `bson:"files" bson:"files"`
+	UserID		uuid.UUID `bson:"userId" json:"userId"`
+	Files 		[]uuid.UUID `bson:"files" json:"files"`
 	Scheduled 	time.Time `bson:"scheduled,omitempty" json:"scheduled"`
 }
 //a

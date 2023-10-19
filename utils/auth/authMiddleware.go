@@ -1,11 +1,13 @@
 package auth
 
 import (
+	"fmt"
 	"github.com/gin-gonic/gin"
 	"strings"
 )
 
 func AuthMiddleware(c *gin.Context) {
+		fmt.Println("middleware just fine")
 		authHeader := c.GetHeader("Authorization")
 		if authHeader == "" || !strings.HasPrefix(authHeader, "Bearer ") {
 			c.JSON(401, gin.H{"error":"Unauthorized"})
