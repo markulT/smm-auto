@@ -7,13 +7,20 @@ import (
 
 
 type Post struct {
-	ID        	uuid.UUID `bson:"_id"`
-	Text        string `bson:"text"`
-	ChannelName string `bson:"channelName"`
-	Type        string `bson:"type"`
-	UserID		uuid.UUID `bson:"userId"`
-	Files 		[]uuid.UUID `bson:"files"`
-	Scheduled 	time.Time `bson:"scheduled,omitempty"`
+	ID        	uuid.UUID `bson:"_id" json:"id"`
+	Text        string `bson:"text" json:"content"`
+	Title        string `bson:"title" json:"title"`
+	ChannelName string `bson:"channelName" json:"chat"`
+	Type        string `bson:"type" json:"type"`
+	UserID		uuid.UUID `bson:"userId" bson:"userId"`
+	Files 		[]uuid.UUID `bson:"files" bson:"files"`
+	Scheduled 	time.Time `bson:"scheduled,omitempty" json:"scheduled"`
+}
+//a
+
+type PostFile struct {
+	ID uuid.UUID `bson:"file_id"`
+	Type string `bson:"file_type"`
 }
 
 //func (p Post) Value() (driver.Value, error) {

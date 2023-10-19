@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+
+
 func LoadImage(ctx context.Context, objectName string, file *multipart.File) error {
 	imageBucketName := os.Getenv("imageBucketName")
 	err := LoadMultipartFile(ctx, imageBucketName, objectName, file)

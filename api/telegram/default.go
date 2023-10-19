@@ -13,6 +13,7 @@ import (
 )
 
 
+
 func GetMe() {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/getMe"
 	req, _ := http.NewRequest("POST", url, nil)
@@ -157,7 +158,7 @@ func (cnr *CustomReader) Name() string {
 	return cnr.filename
 }
 
-func SendMediaGroup(files []*io.Reader,filenames[]string, caption string) (string, error) {
+func SendMediaGroup(files []*io.Reader,filenames[]string, caption string, channelName string) (string, error) {
 	bot, err := telego.NewBot(os.Getenv("botToken"), telego.WithDefaultDebugLogger())
 	if err != nil {
 		return "", err
@@ -173,12 +174,12 @@ func SendMediaGroup(files []*io.Reader,filenames[]string, caption string) (strin
 		}
 		mediaItems = append(mediaItems, media)
 	}
-	mdGroup := telegoutil.MediaGroup(telegoutil.Username("@smm_auto_test"), mediaItems...)
+	mdGroup := telegoutil.MediaGroup(telegoutil.Username(channelName), mediaItems...)
 	_, _ = bot.SendMediaGroup(mdGroup)
 	return "", nil
 }
 
-func SendPhoto(src io.Reader, caption string, fileName string) (message string, err error) {
+func SendPhoto(src io.Reader, caption string, fileName string, channelName string) (message string, err error) {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendPhoto"
 	fmt.Println(url)
 
@@ -199,7 +200,7 @@ func SendPhoto(src io.Reader, caption string, fileName string) (message string, 
 		fmt.Println(err)
 		return "", nil
 	}
-	_ = writer.WriteField("chat_id", "@smm_auto_test")
+	_ = writer.WriteField("chat_id", channelName)
 	_ = writer.WriteField("caption", caption)
 	err = writer.Close()
 	if err !=nil {
@@ -252,12 +253,10 @@ func SendAudio(file *multipart.FileHeader, caption string, chatId string) (messa
 	_ = writer.WriteField("caption", caption)
 	err = writer.Close()
 	if err != nil {
-		fmt.Println(err)
-		return
+		return "", err
 	}
 	req, err := http.NewRequest("POST", url, &requestBody)
 	if err != nil {
-		fmt.Println(err)
 		return "", err
 	}
 	req.Header.Set("Content-Type", writer.FormDataContentType())
@@ -267,13 +266,77 @@ func SendAudio(file *multipart.FileHeader, caption string, chatId string) (messa
 		return
 	}
 	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-	fmt.Println("response body : ")
-	fmt.Println(string(body))
+	//body, _ := io.ReadAll(res.Body)
 	return "success", nil
 }
 
+func SendAudioBytes(reader io.Reader, caption string,chatId string, filename string) (string, error) {
+	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendAudio"
+	var requestBody bytes.Buffer
+	writer := multipart.NewWriter(&requestBody)
+	imageField, err := writer.CreateFormFile("audio", filename)
+	if err != nil {
+		return "", err
+	}
+	_, err = io.Copy(imageField, reader)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	_ = writer.WriteField("chat_id", chatId)
+	_ = writer.WriteField("caption", caption)
+	err = writer.Close()
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	req, err := http.NewRequest("POST", url, &requestBody)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	//body, _ := io.ReadAll(res.Body)
+	return "success", nil
+}
 
+func SendVoiceBytes(reader io.Reader, caption string,chatId string, filename string) (string, error) {
+	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVoice"
+	var requestBody bytes.Buffer
+	writer := multipart.NewWriter(&requestBody)
+	imageField, err := writer.CreateFormFile("voice", filename)
+	if err != nil {
+		return "", err
+	}
+	_, err = io.Copy(imageField, reader)
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	_ = writer.WriteField("chat_id", chatId)
+	_ = writer.WriteField("caption", caption)
+	err = writer.Close()
+	if err != nil {
+		fmt.Println(err)
+		return "", err
+	}
+	req, err := http.NewRequest("POST", url, &requestBody)
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", writer.FormDataContentType())
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer res.Body.Close()
+	//body, _ := io.ReadAll(res.Body)
+	return "success", nil
+}
 
 func SendVoice(file *multipart.FileHeader, caption string, chatId string) (message string, err error) {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVoice"

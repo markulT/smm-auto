@@ -24,6 +24,9 @@ func ConnectToMinio()  {
 		Creds: credentials.NewStaticV4(accessKey, secretKey, ""),
 		Secure: false,
 	})
+	if err != nil {
+		log.Fatal(err)
+	}
 	imageBucketName := os.Getenv("imageBucketName")
 	imageBucketExists, err := MinioClient.BucketExists(context.Background(), imageBucketName)
 	if err != nil {
@@ -57,9 +60,18 @@ func ConnectToMinio()  {
 			log.Fatal(err)
 		}
 	}
+	audioBucketName := os.Getenv("audioBucketName")
+	audioBucketNameExists, err := MinioClient.BucketExists(context.Background(), audioBucketName)
 	if err != nil {
 		log.Fatal(err)
 	}
+	if !audioBucketNameExists {
+		err = MinioClient.MakeBucket(context.Background(), audioBucketName, minio.MakeBucketOptions{})
+		if err != nil {
+			log.Fatal(err)
+		}
+	}
+
 }
 
 func CreateNewBucket(bucketName string)  {

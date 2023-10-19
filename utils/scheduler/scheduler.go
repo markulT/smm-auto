@@ -66,6 +66,7 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 		originalTimezone, offset := scheduledPost.Scheduled.Zone()
 		currentTime := time.Now().In(time.FixedZone(originalTimezone, offset))
 		if scheduledPost.Scheduled.Before(currentTime) {
+			fmt.Println(scheduledPost.Type)
 			switch scheduledPost.Type {
 				case "message":
 					telegram.SendMessage(scheduledPost.Text, scheduledPost.ChannelName)
@@ -74,11 +75,13 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 						return
 					}
 				case "photo":
+					fmt.Println("aboba")
 					image, err := s3.GetImage(scheduledPost.Files[0].String())
 					if err != nil {
+						fmt.Println(err)
 						return
 					}
-					_, err = telegram.SendPhoto(image, scheduledPost.Text, scheduledPost.Files[0].String())
+					_, err = telegram.SendPhoto(image, scheduledPost.Text, scheduledPost.Files[0].String(), scheduledPost.ChannelName)
 					if err != nil {
 						return
 					}
@@ -101,7 +104,7 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 						filenames = append(filenames, fileID.String())
 						files = append(files, &media)
 					}
-					_, err := telegram.SendMediaGroup(files, filenames, scheduledPost.Text)
+					_, err := telegram.SendMediaGroup(files, filenames, scheduledPost.Text, scheduledPost.ChannelName)
 					if err != nil {
 						return
 					}
@@ -113,15 +116,34 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 						return
 					}
 				case "video":
-					fmt.Println("posting video")
 					file, err := s3.GetVideo(scheduledPost.Files[0].String())
 					if err != nil {
-						fmt.Println(err)
 						return
 					}
 					_, err = telegram.SendVideoBytes(file, scheduledPost.Files[0].String(), scheduledPost.Text, scheduledPost.ChannelName)
 					if err != nil {
-						fmt.Println(err)
+						return
+					}
+					err = repository.DeleteScheduledPostById(scheduledPost.ID)
+				case "audio":
+					fmt.Println("sending scheduled audio")
+					file, err := s3.GetAudio(scheduledPost.Files[0].String())
+					if err != nil {
+						return
+					}
+					_,err = telegram.SendAudioBytes(file, scheduledPost.Text, scheduledPost.ChannelName, scheduledPost.Files[0].String())
+					if err != nil {
+						return
+					}
+					err = repository.DeleteScheduledPostById(scheduledPost.ID)
+				case "voice":
+					fmt.Println("sending scheduled voice")
+					file, err := s3.GetAudio(scheduledPost.Files[0].String())
+					if err != nil {
+						return
+					}
+					_,err = telegram.SendVoiceBytes(file, scheduledPost.Text, scheduledPost.ChannelName, scheduledPost.Files[0].String())
+					if err != nil {
 						return
 					}
 					err = repository.DeleteScheduledPostById(scheduledPost.ID)

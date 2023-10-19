@@ -44,10 +44,11 @@ func CreateAccessToken(body map[string]interface{}) (string, error) {
 func CreateRefreshToken(body map[string]interface{}) (string, error) {
 	expirationTime := utils.GetEnvInt("refreshExpirationTimeDays", 30)
 	expirationTimeUnix := time.Now().Add(time.Duration(expirationTime) * 24 * time.Hour)
-	return createToken(body,expirationTimeUnix, []byte(os.Getenv("secretKeyRefresh")))
+	return createToken(body,expirationTimeUnix, []byte(os.Getenv("secretKey")))
 }
 
-func Validate(tokenString string, secretKey string) (*jwt.Token, error) {
+func Validate(tokenString string) (*jwt.Token, error) {
+	secretKey := os.Getenv("secretKey")
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
 	})
@@ -60,13 +61,16 @@ func Validate(tokenString string, secretKey string) (*jwt.Token, error) {
 	return token, nil
 }
 
-func GetSubject(tokenString string, secretKey string) (string, error)  {
+func GetSubject(tokenString string) (string, error)  {
+	secretKey := os.Getenv("secretKey")
 	token, err := jwt.Parse(tokenString, func(token *jwt.Token) (interface{}, error) {
 		return []byte(secretKey), nil
 	})
 	if err!=nil {
 		return "" ,err
 	}
+	//a
 	claims:=token.Claims.(jwt.MapClaims)
+	fmt.Println(claims)
 	return claims["email"].(string), nil
 }

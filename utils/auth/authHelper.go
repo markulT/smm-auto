@@ -4,18 +4,16 @@ import (
 	"github.com/gin-gonic/gin"
 	"golang.org/x/crypto/bcrypt"
 	"golearn/repository"
-	"net/http"
 )
 
-func UserExists(email string, c *gin.Context) {
+func UserExists(email string) bool {
 	//var count int64
 	//utils.DB.Model(&models.User{}).Where("email = ?", email).Count(&count)
 	_, err := repository.GetUserByEmail(email)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "User already exists"})
-		c.Abort()
-		return
+		return false
 	}
+	return true
 }
 func GenerateTokens(body map[string]interface{}, c *gin.Context) (Tokens) {
 	var tokens Tokens

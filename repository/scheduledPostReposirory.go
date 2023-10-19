@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo/options"
@@ -71,6 +72,7 @@ func UpdateFilesList(pId uuid.UUID, files []uuid.UUID) error {
 	postCollection := utils.DB.Collection("posts")
 	_, err := postCollection.UpdateByID(context.Background(), pId, bson.M{"$set":bson.M{"files":files}})
 	if err != nil {
+		fmt.Println(err)
 		return err
 	}
 	return nil

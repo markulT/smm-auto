@@ -4,8 +4,6 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"golearn/api/telegram"
-	"golearn/models"
-	"golearn/repository"
 	"golearn/utils/videoCompress"
 	"io"
 	"os"
@@ -26,7 +24,6 @@ func SetupBotRoutes(r *gin.Engine) {
 	botGroup.POST("/sendVideoNote", sendVideoNoteHandler)
 	botGroup.POST("/sendLocation", sendLocationHandler)
 	botGroup.POST("/sendVenue", sendVenueHandler)
-	//botGroup.DELETE("/delete/:id", postDelete)
 }
 
 func getMeHandler(c *gin.Context) {
@@ -36,10 +33,7 @@ func getMeHandler(c *gin.Context) {
 func sendMessageHandler(c *gin.Context) {
 	var body struct {
 		Text        string `json:"text"`
-		Scheduled   string `json:"time"`
-		TimeZone    string `json:"timeZone"`
 		ChannelName string `json:"channelName"`
-		Username    string `json:"username"`
 	}
 	err := c.Bind(&body)
 	if err != nil {
@@ -47,16 +41,9 @@ func sendMessageHandler(c *gin.Context) {
 		return
 	}
 
-	newPost := models.Post{
-		Text:        body.Text,
-		ChannelName: body.ChannelName,
-		Type:        "message",
-	}
 
-	if err := repository.SavePost(&newPost); err != nil {
-		c.JSON(400, gin.H{"message": "Error scheduling post"})
-		return
-	}
+
+	telegram.SendMessage(body.Text, body.ChannelName)
 
 	c.JSON(200, gin.H{"message": "Message has been scheduled successfully"})
 
@@ -85,7 +72,6 @@ func sendVoiceHandler(c *gin.Context) {
 }
 
 func sendVideoHandler(c *gin.Context) {
-	fmt.Println("aboba")
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["file"]
 	caption := multipart.Value["caption"]
@@ -249,21 +235,11 @@ func sendVenueHandler(c *gin.Context) {
 	})
 }
 
-//func postDelete(c *gin.Context) {
-//
-//	id := c.Param("id")
-//
-//	utils.DB.Delete(&models.Post{}, id)
-//
-//	c.JSON(200, gin.H{
-//		"statusCode": "success",
-//	})
-//}
 func sendPhotoHandler(c *gin.Context) {
-
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["photo"]
 	caption := multipart.Value["caption"]
+	channelName := multipart.Value["channelName"]
 	for _, file := range files {
 		of, err := file.Open()
 		if err != nil {
@@ -272,7 +248,7 @@ func sendPhotoHandler(c *gin.Context) {
 			return
 		}
 		defer of.Close()
-		telegram.SendPhoto(of, caption[0], file.Filename)
+		telegram.SendPhoto(of, caption[0], file.Filename, channelName[0])
 	}
 	c.JSON(200, gin.H{"aboba":"aboba"})
 }
@@ -280,6 +256,7 @@ func sendMediaGroupHandler(c *gin.Context) {
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["media"]
 	caption := multipart.Value["caption"]
+	chat := multipart.Value["chat"]
 	var filenames []string
 	var fileList []*io.Reader
 	for _, file := range files {
@@ -295,7 +272,7 @@ func sendMediaGroupHandler(c *gin.Context) {
 		filenames = append(filenames, file.Filename)
 	}
 	//_, err := telegram.SendMediaGroupLazy(files, caption[0])
-	_, err := telegram.SendMediaGroup(fileList, filenames, caption[0])
+	_, err := telegram.SendMediaGroup(fileList, filenames, caption[0], chat[0])
 	if err!= nil {
 		c.JSON(500, gin.H{"error":err})
 		c.Abort()

@@ -7,6 +7,8 @@ import (
 	"os"
 )
 
+
+
 func LoadMedia(ctx context.Context, objectName string, file *multipart.File) error {
 	bucketName := os.Getenv("mediaGroupBucketName")
 	err := LoadMultipartFile(ctx, bucketName, objectName, file)
