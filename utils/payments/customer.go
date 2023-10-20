@@ -4,6 +4,7 @@ import (
 	"github.com/stripe/stripe-go/v75"
 	"github.com/stripe/stripe-go/v75/customer"
 	"github.com/stripe/stripe-go/v75/paymentmethod"
+	"github.com/stripe/stripe-go/v75/plan"
 	"github.com/stripe/stripe-go/v75/subscription"
 )
 
@@ -13,6 +14,7 @@ type PaymentService interface {
 	CreateSubscription(email string, subscriptionID string) (subID string, err error)
 	AddPaymentMethod(cd CardData) (*stripe.PaymentMethod,error)
 	AttachPaymentMethodToCustomer(pmid string, customerID string) error
+	GetSubPlans() []*stripe.Plan
 }
 
 type stripePaymentService struct {
@@ -20,6 +22,18 @@ type stripePaymentService struct {
 
 func NewStripePaymentService() PaymentService {
 	return &stripePaymentService{}
+}
+
+func (s *stripePaymentService) GetSubPlans() []*stripe.Plan {
+	var planList []*stripe.Plan
+	params := &stripe.PlanListParams{}
+	params.Filters.AddFilter("limit", "", "3")
+	i := plan.List(params)
+	for i.Next() {
+		p := i.Plan()
+		planList = append(planList, p)
+	}
+	return planList
 }
 
 func (s *stripePaymentService) AttachPaymentMethodToCustomer(pmid string, customerID string) error {

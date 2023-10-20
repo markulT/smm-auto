@@ -10,6 +10,7 @@ func (e SubscriptionDoesNotExistException) Error() string {
 }
 
 func checkIfPlanExists(planID string) bool {
+
 	_, err := plan.Get(planID, nil)
 	if err != nil {
 		return false

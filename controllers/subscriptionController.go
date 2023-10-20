@@ -12,6 +12,7 @@ import (
 
 func SetupPaymentRoutes(r *gin.Engine) {
 	paymentGroup := r.Group("/payment")
+	paymentGroup.GET("/plans/", jsonHelper.MakeHttpHandler(getSubPlans))
 	paymentGroup.Use(auth.AuthMiddleware)
 	//paymentGroup.Use(payments.PaymentMiddleware)
 	//paymentGroup.POST("/intent", jsonHelper.MakeHttpHandler(createIntentHandler))
@@ -21,6 +22,14 @@ func SetupPaymentRoutes(r *gin.Engine) {
 
 	webHookGroup := r.Group("/stripeWebhook")
 	webHookGroup.POST("/subscribe",subscriptionWebhookHandler)
+}
+
+func getSubPlans(c *gin.Context) error {
+
+	paymentsService := payments.NewStripePaymentService()
+	planList := paymentsService.GetSubPlans()
+	c.JSON(200, gin.H{"plans":planList})
+	return nil
 }
 
 func addPaymentMethodHandler(c *gin.Context) error {
