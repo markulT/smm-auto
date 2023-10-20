@@ -22,6 +22,7 @@ func main() {
 	controllers.SetupTelegramRoutes(r)
 	controllers.SetupBotRoutes(r)
 	controllers.SetupScheduleRoutes(r)
+	controllers.SetupPaymentRoutes(r)
 
 	go scheduler.FetchAndProcessPosts()
 

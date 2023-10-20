@@ -31,8 +31,6 @@ func login(c *gin.Context) error {
 	}
 
 	jsonHelper.BindWithException(&body, c)
-	fmt.Println("email is ")
-	fmt.Println(body.Email)
 	userFromDB, err := repository.GetUserByEmail(body.Email)
 	if err!=nil {
 		return jsonHelper.ApiError{
