@@ -10,18 +10,15 @@ import (
 	"golearn/utils/auth"
 	"golearn/utils/jsonHelper"
 	"golearn/utils/s3"
-	"golearn/utils/videoCompress"
-	"os"
-	"path/filepath"
 	"sync"
 	"time"
 )
 
-func SetupScheduleRoutes(r *gin.Engine)  {
+func SetupScheduleRoutes(r *gin.Engine) {
 	scheduleGroup := r.Group("/schedule")
 
-	scheduleGroup.GET("/image/:imageName", jsonHelper.MakeHttpHandler(getPostImage) )
-	scheduleGroup.GET("/video/:videoName", jsonHelper.MakeHttpHandler(getPostsVideo) )
+	scheduleGroup.GET("/image/:imageName", jsonHelper.MakeHttpHandler(getPostImage))
+	scheduleGroup.GET("/video/:videoName", jsonHelper.MakeHttpHandler(getPostsVideo))
 
 	scheduleGroup.Use(auth.AuthMiddleware)
 
@@ -29,16 +26,27 @@ func SetupScheduleRoutes(r *gin.Engine)  {
 	//scheduleGroup.Use(auth.SubLevelMiddleware(0))
 	scheduleGroup.POST("/message", jsonHelper.MakeHttpHandler(scheduleMessageHandler))
 	scheduleGroup.POST("/photo", jsonHelper.MakeHttpHandler(schedulePhotoHandler))
-	scheduleGroup.POST("/mediaGroup", scheduleMediaGroupHandler)
-	scheduleGroup.POST("/video", scheduleVideoHandler)
-	scheduleGroup.POST("/audio", scheduleAudioHandler)
-	scheduleGroup.POST("/voice", scheduleVoiceHandler)
-	scheduleGroup.GET("/", getScheduledPostHandler)
+	scheduleGroup.POST("/mediaGroup", jsonHelper.MakeHttpHandler(scheduleMediaGroupHandler))
+	scheduleGroup.POST("/video", jsonHelper.MakeHttpHandler(scheduleVideoHandler))
+	scheduleGroup.POST("/audio", jsonHelper.MakeHttpHandler(scheduleAudioHandler))
+	scheduleGroup.POST("/voice", jsonHelper.MakeHttpHandler(scheduleVoiceHandler))
+	scheduleGroup.GET("/", jsonHelper.MakeHttpHandler(getScheduledPostHandler))
 	scheduleGroup.GET("/:id", jsonHelper.MakeHttpHandler(getPostHandler))
 	scheduleGroup.DELETE("/delete/:id", jsonHelper.MakeHttpHandler(deletePostHandler))
 	scheduleGroup.GET("/date/:scheduled", jsonHelper.MakeHttpHandler(getPostsByDate))
 }
 
+// @Summary Get posts videos
+// @Tags posts
+// @Description Receive post's video banner
+// @ID GetPostsVideo
+// @Accept json
+// @Produce octet-stream
+// @Param videoName path string true "Name of the image"
+// @Success 200 {string} a
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/video/{videoName} [get]
 func getPostsVideo(c *gin.Context) error {
 	videoName, err := uuid.Parse(c.Param("videoName"))
 
@@ -67,6 +75,17 @@ func getPostsVideo(c *gin.Context) error {
 	return nil
 }
 
+// @Summary Get posts by date
+// @Tags posts
+// @Description Receive posts by date
+// @ID GetPostsByDate
+// @Accept json
+// @Produce json
+// @Param scheduled query string true "Date"
+// @Success 200 {string} a
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/date/{scheduled} [get]
 func getPostsByDate(c *gin.Context) error {
 
 	postsRepo := mongoRepository.NewPostRepository()
@@ -75,11 +94,11 @@ func getPostsByDate(c *gin.Context) error {
 	if !exists {
 		return jsonHelper.ApiError{
 			Err:    "User unauthorized",
-			Status: 401,
+			Status: 417,
 		}
 	}
 
-	scheduledTime, err := time.Parse( "2006-01-15",c.Param("scheduled"))
+	scheduledTime, err := time.Parse("2006-01-15", c.Param("scheduled"))
 
 	if err != nil {
 		return jsonHelper.ApiError{
@@ -110,8 +129,8 @@ func getPostsByDate(c *gin.Context) error {
 				Err:    "Timeout",
 				Status: 500,
 			}
-		case posts:=<-postsch:
-			c.JSON(200, gin.H{"posts":posts})
+		case posts := <-postsch:
+			c.JSON(200, gin.H{"posts": posts})
 			c.Abort()
 			return nil
 		}
@@ -119,6 +138,17 @@ func getPostsByDate(c *gin.Context) error {
 	}
 }
 
+// @Summary Get post's image
+// @Tags posts
+// @Description Receive post's image banner
+// @ID GetPostsImage
+// @Accept json
+// @Produce json
+// @Param imageName path string true "Name of the image"
+// @Success 200 {string} a
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/image/{imageName} [post]
 func getPostImage(c *gin.Context) error {
 	imageName, err := uuid.Parse(c.Param("imageName"))
 
@@ -128,13 +158,6 @@ func getPostImage(c *gin.Context) error {
 			Status: 400,
 		}
 	}
-	//post ,err := postsRepo.GetPostByImageName(context.Background(), imageName)
-	//if err != nil {
-	//	return jsonHelper.ApiError{
-	//		Err:    err.Error(),
-	//		Status: 500,
-	//	}
-	//}
 
 	image, err := s3.GetImage(imageName.String())
 	if err != nil {
@@ -157,6 +180,18 @@ func getPostImage(c *gin.Context) error {
 	return nil
 }
 
+// @Summary Delete post by id
+// @Tags posts
+// @Description Delete post by id
+// @ID DeletePost
+// @Accept json
+// @Produce json
+// @Param id path string true "ID of post to delete"
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/delete/{id} [delete]
 func deletePostHandler(c *gin.Context) error {
 	postsRepo := mongoRepository.NewPostRepository()
 
@@ -164,7 +199,7 @@ func deletePostHandler(c *gin.Context) error {
 	if !exists {
 		return jsonHelper.ApiError{
 			Err:    "User unauthorized",
-			Status: 401,
+			Status: 417,
 		}
 	}
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
@@ -196,10 +231,22 @@ func deletePostHandler(c *gin.Context) error {
 		}
 	}
 	deleted := postsRepo.DeletePostByID(context.Background(), post.ID)
-	c.JSON(200, gin.H{"status":deleted})
+	c.JSON(200, gin.H{"status": deleted})
 	return nil
 }
 
+// @Summary Receive post by id
+// @Tags posts
+// @Description Receive post's image banner
+// @ID GetPost
+// @Accept json
+// @Produce json
+// @Param id path string true "ID of post to receive"
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/{id} [get]
 func getPostHandler(c *gin.Context) error {
 
 	postsRepo := mongoRepository.NewPostRepository()
@@ -208,7 +255,7 @@ func getPostHandler(c *gin.Context) error {
 	if !exists {
 		return jsonHelper.ApiError{
 			Err:    "User unauthorized",
-			Status: 401,
+			Status: 417,
 		}
 	}
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
@@ -238,25 +285,37 @@ func getPostHandler(c *gin.Context) error {
 			Status: 403,
 		}
 	}
-	c.JSON(200, gin.H{"post":post})
+	c.JSON(200, gin.H{"post": post})
 	return nil
 }
 
-func getScheduledPostHandler(c *gin.Context) {
+// @Summary Get all scheduled posts
+// @Tags posts
+// @Description Receive all scheduled posts
+// @ID GetScheduledPosts
+// @Accept json
+// @Produce json
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/ [get]
+func getScheduledPostHandler(c *gin.Context) error {
 	postsRepo := mongoRepository.NewPostRepository()
 	authUserEmail, exists := c.Get("userEmail")
 	if !exists {
-		c.JSON(401, gin.H{"Error":"Unauthorized"})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    "Unauthorized",
+			Status: 417,
+		}
 	}
 	postsch := make(chan []models.Post, 1)
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
 	if err != nil {
-		fmt.Println("aboba error")
-		c.JSON(500, gin.H{"Error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
 	}
 	wg := &sync.WaitGroup{}
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
@@ -265,20 +324,36 @@ func getScheduledPostHandler(c *gin.Context) {
 	wg.Wait()
 	for {
 		select {
-			case posts:= <-postsch:
-				c.JSON(200, gin.H{"posts":posts})
-				c.Abort()
-				return
-			case <-ctx.Done():
-				fmt.Println("aboba error 1")
-				c.JSON(500, gin.H{"Error":"Timeout. Due to internal server error"})
-				c.Abort()
-				return
+		case posts := <-postsch:
+			c.JSON(200, gin.H{"posts": posts})
+			c.Abort()
+			return nil
+		case <-ctx.Done():
+			return jsonHelper.ApiError{
+				Err:    "Timeout. Due to internal server error",
+				Status: 500,
+			}
 		}
 	}
 }
 
-func scheduleVoiceHandler(c *gin.Context)  {
+// @Summary Schedule voice
+// @Tags posts
+// @Description Receive all scheduled posts
+// @ID ScheduleVoice
+// @Accept json
+// @Produce json
+// @Param caption body string true "Text of post"
+// @Param audio body file true "Voice message file"
+// @Param channelName body string true "Channel name"
+// @Param title body string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled body string true "Scheduled date"
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/voice [post]
+func scheduleVoiceHandler(c *gin.Context) error {
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["audio"]
 	caption := multipart.Value["caption"]
@@ -289,19 +364,21 @@ func scheduleVoiceHandler(c *gin.Context)  {
 	file, err := files[0].Open()
 	defer file.Close()
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	postID, err := uuid.NewRandom()
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	post := models.Post{
-		Title: title[0],
-		ID: postID,
+		Title:       title[0],
+		ID:          postID,
 		Text:        caption[0],
 		ChannelName: channelName[0],
 		Type:        "voice",
@@ -310,26 +387,40 @@ func scheduleVoiceHandler(c *gin.Context)  {
 	}
 	err = mongoRepository.SaveScheduledPost(&post)
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
-	}
-	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	err = s3.LoadAudio(postID.String(), &file)
 	if err != nil {
-		c.JSON(400, gin.H{"error":err.Error()})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
 	}
 
 	c.JSON(200, gin.H{"message": "success"})
+	return nil
 }
 
-func scheduleAudioHandler(c *gin.Context) {
+// @Summary Schedule audio
+// @Tags posts
+// @Description Schedule audio
+// @ID ScheduleAudio
+// @Accept json
+// @Produce json
+// @Param caption body string true "Text of post"
+// @Param audio body file true "Audio message file"
+// @Param channelName body string true "Channel name"
+// @Param title body string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled body string true "Scheduled date"
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/audio [post]
+func scheduleAudioHandler(c *gin.Context) error {
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["audio"]
 	title := multipart.Value["title"]
@@ -340,19 +431,21 @@ func scheduleAudioHandler(c *gin.Context) {
 	file, err := files[0].Open()
 	defer file.Close()
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	postID, err := uuid.NewRandom()
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	post := models.Post{
-		ID: postID,
-		Title: title[0],
+		ID:          postID,
+		Title:       title[0],
 		Text:        caption[0],
 		ChannelName: channelName[0],
 		Type:        "audio",
@@ -361,30 +454,47 @@ func scheduleAudioHandler(c *gin.Context) {
 	}
 	err = mongoRepository.SaveScheduledPost(&post)
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	err = s3.LoadAudio(postID.String(), &file)
 	if err != nil {
-		c.JSON(400, gin.H{"error":err.Error()})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
 	}
 
 	c.JSON(200, gin.H{"message": "success"})
+	return nil
 }
 
+type ScheduleMessageRequest struct {
+	Title string `json:"title"`
+	Text  string `json:"text"`
+	Chat  string `json:"chat"`
+	Time  string `json:"scheduled"`
+}
+
+// @Summary Schedule message
+// @Tags posts
+// @Description Schedule message
+// @ID ScheduleMessage
+// @Accept json
+// @Produce json
+// @Param request body controllers.ScheduleMessageRequest true "Request body"
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/audio [post]
 func scheduleMessageHandler(c *gin.Context) error {
 
 	postRepo := mongoRepository.NewPostRepository()
 
-	var body struct {
-		Title string `json:"title"`
-		Text string `json:"text"`
-		Chat string `json:"chat"`
-		Time string `json:"scheduled"`
-	}
+	var body ScheduleMessageRequest
 	jsonHelper.BindWithException(&body, c)
 	postId, _ := uuid.NewRandom()
 
@@ -392,20 +502,20 @@ func scheduleMessageHandler(c *gin.Context) error {
 	if !exists {
 		return jsonHelper.ApiError{
 			Err:    "User unauthorized",
-			Status: 401,
+			Status: 417,
 		}
 	}
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", body.Time)
-	post:=models.Post{
-		Title: body.Title,
+	post := models.Post{
+		Title:       body.Title,
 		Text:        body.Text,
 		ChannelName: body.Chat,
 		Type:        "message",
 		UserID:      user.ID,
-		Files:    	 nil,
-		ID: 		 postId,
-		Scheduled: parsedTime,
+		Files:       nil,
+		ID:          postId,
+		Scheduled:   parsedTime,
 	}
 	fmt.Println(postId)
 	err = postRepo.SavePostWithId(&post, postId)
@@ -416,10 +526,26 @@ func scheduleMessageHandler(c *gin.Context) error {
 			Status: 500,
 		}
 	}
-	c.JSON(200, gin.H{"post":post})
+	c.JSON(200, gin.H{"post": post})
 	return nil
 }
 
+// @Summary Schedule photo
+// @Tags posts
+// @Description Schedule photo
+// @ID SchedulePhoto
+// @Accept json
+// @Produce json
+// @Param caption body string true "Text of post"
+// @Param photo body file true "photo message file"
+// @Param channelName body string true "Channel name"
+// @Param title body string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled body string true "Scheduled date"
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/photo [post]
 func schedulePhotoHandler(c *gin.Context) error {
 	multipart, _ := c.MultipartForm()
 
@@ -448,14 +574,14 @@ func schedulePhotoHandler(c *gin.Context) error {
 	if !exists {
 		return jsonHelper.ApiError{
 			Err:    "User unauthorized",
-			Status: 401,
+			Status: 417,
 		}
 	}
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
 	post := models.Post{
-		Title: title[0],
-		ID: postID,
-		UserID: user.ID,
+		Title:       title[0],
+		ID:          postID,
+		UserID:      user.ID,
 		Text:        caption[0],
 		ChannelName: channelName[0],
 		Type:        "photo",
@@ -476,11 +602,27 @@ func schedulePhotoHandler(c *gin.Context) error {
 			Status: 500,
 		}
 	}
-	c.JSON(200, gin.H{"message":"success"})
+	c.JSON(200, gin.H{"message": "success"})
 	return nil
 }
 
-func scheduleMediaGroupHandler(c *gin.Context)  {
+// @Summary Schedule mediagroup
+// @Tags posts
+// @Description Schedule mediagroup
+// @ID ScheduleMediaGroup
+// @Accept json
+// @Produce json
+// @Param caption body string true "Text of post"
+// @Param media body file true "Media message file"
+// @Param channelName body string true "Channel name"
+// @Param title body string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled body string true "Channel name"
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/mediaGroup [post]
+func scheduleMediaGroupHandler(c *gin.Context) error {
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["media"]
 	title := multipart.Value["title"]
@@ -491,13 +633,14 @@ func scheduleMediaGroupHandler(c *gin.Context)  {
 	fmt.Println(parsedTime)
 	postID, err := uuid.NewRandom()
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	post := models.Post{
-		Title: title[0],
-		ID: postID,
+		Title:       title[0],
+		ID:          postID,
 		Text:        caption[0],
 		ChannelName: channelName[0],
 		Type:        "mediaGroup",
@@ -506,53 +649,73 @@ func scheduleMediaGroupHandler(c *gin.Context)  {
 	}
 	err = mongoRepository.SaveScheduledPost(&post)
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	var fileList []uuid.UUID
-	for _, file := range files{
-		fmt.Println("processing file")
+	for _, file := range files {
 		of, err := file.Open()
 		if err != nil {
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
+			return jsonHelper.ApiError{
+				Err:    err.Error(),
+				Status: 400,
+			}
 		}
 
 		fileID, err := uuid.NewRandom()
 		if err != nil {
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
+			return jsonHelper.ApiError{
+				Err:    err.Error(),
+				Status: 400,
+			}
 		}
-		err = s3.LoadMedia(context.Background(), fileID.String(),&of)
+		err = s3.LoadMedia(context.Background(), fileID.String(), &of)
 		if err != nil {
-			fmt.Println(err)
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
+			return jsonHelper.ApiError{
+				Err:    err.Error(),
+				Status: 400,
+			}
 		}
 		fmt.Println(fileID)
 		fileList = append(fileList, fileID)
 		err = of.Close()
 		if err != nil {
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
+			return jsonHelper.ApiError{
+				Err:    err.Error(),
+				Status: 500,
+			}
 		}
 	}
 	err = mongoRepository.UpdateFilesList(postID, fileList)
 	if err != nil {
-		fmt.Println(err)
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
 	}
 	c.JSON(200, gin.H{})
+	return nil
 }
 
-func scheduleVideoHandler(c *gin.Context)  {
+// @Summary Schedule video
+// @Tags posts
+// @Description Schedule video
+// @ID ScheduleVideo
+// @Accept json
+// @Produce json
+// @Param caption body string true "Text of post"
+// @Param video body file true "Video message file"
+// @Param channelName body string true "Channel name"
+// @Param title body string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled body string true "Scheduled date"
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /schedule/video [post]
+func scheduleVideoHandler(c *gin.Context) error {
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["video"]
 	title := multipart.Value["title"]
@@ -563,13 +726,14 @@ func scheduleVideoHandler(c *gin.Context)  {
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
 	postID, err := uuid.NewRandom()
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	post := models.Post{
-		ID: postID,
-		Title: title[0],
+		ID:          postID,
+		Title:       title[0],
 		Text:        caption[0],
 		ChannelName: channelName[0],
 		Type:        "video",
@@ -578,71 +742,38 @@ func scheduleVideoHandler(c *gin.Context)  {
 	}
 	err = mongoRepository.SaveScheduledPost(&post)
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	var fileIDList []uuid.UUID
-	if files[0].Size > 48 * 1024 * 1024 {
-		randomName, _ := uuid.NewRandom()
-		compressedFileInfo, err := videoCompress.CompressFileToSize(files[0], randomName.String(), int64(48 * 1024 * 1024))
-		if err != nil {
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
-		}
-		of, err := os.Open(filepath.Join("C:/", compressedFileInfo.CompressedFilename))
-		if err != nil {
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
-		}
-		//_, err = telegram.SendVideo(of, caption[0], channelName[0], compressedFileInfo.CompressedFilename)
-		//if err != nil {
-		//	c.JSON(400, gin.H{"error":err})
-		//	c.Abort()
-		//	return
-		//}
 
-		fileID, err := uuid.NewRandom()
-		err = s3.LoadVideo(fileID.String(), of)
-		if err != nil {
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
+	of, err := files[0].Open()
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
 		}
-
-		of.Close()
-		err = videoCompress.CleanupCompressedFile(filepath.Join("C:/", compressedFileInfo.CompressedFilename))
-		if err != nil {
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
-		}
-		fileIDList = append(fileIDList, fileID)
-	} else {
-		of, err := files[0].Open()
-		if err != nil {
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
-		}
-		defer of.Close()
-		fileID, err := uuid.NewRandom()
-		err = s3.LoadVideoMultipart(fileID.String(), &of)
-		if err != nil {
-			c.JSON(400, gin.H{"error":err})
-			c.Abort()
-			return
-		}
-		fileIDList = append(fileIDList, fileID)
 	}
+	defer of.Close()
+	fileID, err := uuid.NewRandom()
+	err = s3.LoadVideoMultipart(fileID.String(), &of)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
+	}
+	fileIDList = append(fileIDList, fileID)
 
 	err = mongoRepository.UpdateFilesList(postID, fileIDList)
 	if err != nil {
-		c.JSON(400, gin.H{"error":err})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
 	}
 	c.JSON(200, gin.H{})
+	return nil
 }

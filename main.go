@@ -15,11 +15,21 @@ func init() {
 	utils.StripeInit()
 }
 
+// @title SMM-Auto API
+// @version 1.0
+// @description API server for SMM-auto application
+
+// @host localhost:8000
+// @BasePath /
+
+// @securityDefinitions.apiKey ApiKeyAuth
+// @in header
+// @name Authorization
+
 func main() {
 	r := gin.Default()
 
 	controllers.SetupAuthRoutes(r)
-	controllers.SetupTelegramRoutes(r)
 	controllers.SetupBotRoutes(r)
 	controllers.SetupScheduleRoutes(r)
 	controllers.SetupPaymentRoutes(r)

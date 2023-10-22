@@ -24,6 +24,23 @@ type LoginRequestBody struct {
 	Password string `json:"password"`
 }
 
+type AuthResponse struct {
+	RefreshToken string `json:"refreshToken"`
+	AccessToken string `json:"accessToken"`
+}
+
+
+// @Summary Login
+// @Tags auth
+// @Description Login with email&password. Returns jwt tokens that should be saved in application
+// @ID Login
+// @Accept json
+// @Produce json
+// @Param email body string true "account email"
+// @Success 200 {object} controllers.AuthResponse
+// @Failure 403, 404 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /auth/login [post]
 func login(c *gin.Context) error {
 	var body struct{
 		Email string `json:"email"`
@@ -54,16 +71,27 @@ func login(c *gin.Context) error {
 	c.JSON(200, gin.H{
 		"accessToken": tokens.AccessToken,
 		"refreshToken": tokens.RefreshToken,
-		"email": userFromDB.Email,
 	})
 	return nil
 }
 
+type RefreshRequest struct {
+	RefreshToken string `json:"refreshToken"`
+}
 
+// @Summary Refresh
+// @Tags auth
+// @Description Refresh jwt token
+// @ID Refresh
+// @Accept json
+// @Produce json
+// @Param request body controllers.RefreshRequest true "Account info"
+// @Success 200 {object} controllers.AuthResponse
+// @Failure 400, 403, 404 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /auth/refresh [post]
 func refresh(c *gin.Context) error {
-	var body struct {
-		RefreshToken string `json:"refreshToken"`
-	}
+	var body RefreshRequest
 	jsonHelper.BindWithException(&body, c)
 	var userFromDb models.User
 	email, err := auth.GetSubject(body.RefreshToken)
@@ -92,13 +120,23 @@ func refresh(c *gin.Context) error {
 	c.JSON(200, gin.H{
 		"accessToken":tokens.AccessToken,
 		"refreshToken":tokens.RefreshToken,
-		"email": userFromDb.Email,
 	})
 	return nil
 }
 
 
-
+// @Summary Signup
+// @Tags auth
+// @Description Signup
+// @ID Signup
+// @Accept json
+// @Produce json
+// @Param request body controllers.LoginRequestBody true "Account info"
+// @Success 200 {object} controllers.AuthResponse
+// @Failure 400, 403, 404 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /auth/signup [post]
 func signup(c *gin.Context) error {
 	var body struct{
 		Email string `json:"email"`
@@ -155,7 +193,6 @@ func signup(c *gin.Context) error {
 	c.JSON(200, gin.H{
 		"accessToken": tokens.AccessToken,
 		"refreshToken": tokens.RefreshToken,
-		"email":newUser.Email,
 	})
 	return nil
 }

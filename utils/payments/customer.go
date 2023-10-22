@@ -27,7 +27,7 @@ func NewStripePaymentService() PaymentService {
 func (s *stripePaymentService) GetSubPlans() []*stripe.Plan {
 	var planList []*stripe.Plan
 	params := &stripe.PlanListParams{}
-	params.Filters.AddFilter("limit", "", "3")
+	params.Filters.AddFilter("limit", "", "100")
 	i := plan.List(params)
 	for i.Next() {
 		p := i.Plan()
@@ -54,7 +54,7 @@ func (s *stripePaymentService) AddPaymentMethod(cd CardData) (*stripe.PaymentMet
 
 	params := &stripe.PaymentMethodParams{
 		Card: &stripe.PaymentMethodCardParams{
-			Number: stripe.String("4242424242424242"),
+			Number: stripe.String(cd.CardNumber),
 			ExpMonth: &cd.ExpMonth,
 			ExpYear: &cd.ExpYear,
 			CVC: stripe.String(cd.CVC),

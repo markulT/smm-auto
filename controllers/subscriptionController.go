@@ -3,6 +3,7 @@ package controllers
 import (
 	"fmt"
 	"github.com/gin-gonic/gin"
+	"github.com/stripe/stripe-go/v75"
 	"golearn/repository"
 	mongoRepository "golearn/repository"
 	"golearn/utils/auth"
@@ -14,7 +15,7 @@ func SetupPaymentRoutes(r *gin.Engine) {
 	paymentGroup := r.Group("/payment")
 	paymentGroup.GET("/plans/", jsonHelper.MakeHttpHandler(getSubPlans))
 	paymentGroup.Use(auth.AuthMiddleware)
-	//paymentGroup.Use(payments.PaymentMiddleware)
+	paymentGroup.Use(payments.PaymentMiddleware)
 	//paymentGroup.POST("/intent", jsonHelper.MakeHttpHandler(createIntentHandler))
 	paymentGroup.POST("/subscription", jsonHelper.MakeHttpHandler(subscriptionСreationHandler))
 	paymentGroup.GET("/customerExists", customerExistsHandler)
@@ -24,6 +25,21 @@ func SetupPaymentRoutes(r *gin.Engine) {
 	webHookGroup.POST("/subscribe",subscriptionWebhookHandler)
 }
 
+type GetSubPlansResponse struct {
+	Plans []*stripe.Plan `json:"plans"`
+}
+
+// @Summary Get subscription plans
+// @Tags posts
+// @Description Get all available subscription plans
+// @ID GetSubPlans
+// @Accept json
+// @Produce json
+// @Success 200 controllers.GetSubPlansResponse
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /payments/plans [get]
 func getSubPlans(c *gin.Context) error {
 
 	paymentsService := payments.NewStripePaymentService()
@@ -32,17 +48,30 @@ func getSubPlans(c *gin.Context) error {
 	return nil
 }
 
+type AddPaymentMethodRequest struct {
+	CardNumber string `json:"cardNumber"`
+	ExpMonth int64 `json:"expMonth"`
+	ExpYear int64 `json:"expYear"`
+	CVC string `json:"cvc"`
+}
+
+// @Summary Add payment method
+// @Tags posts
+// @Description Add payment method (card)
+// @ID AddPaymentMethod
+// @Accept json
+// @Produce json
+// @Param request body controllers.AddPaymentMethodRequest true "Card data"
+// @Success 200 controllers.GetSubPlansResponse
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /payments/paymentMethod/add [post]
 func addPaymentMethodHandler(c *gin.Context) error {
 
 	paymentsService := payments.NewStripePaymentService()
 
-	var body struct {
-		SubscriptionType string `json:"subscriptionType"`
-		CardNumber string `json:"cardNumber"`
-		ExpMonth int64 `json:"expMonth"`
-		ExpYear int64 `json:"expYear"`
-		CVC string `json:"cvc"`
-	}
+	var body AddPaymentMethodRequest
 
 	jsonHelper.BindWithException(&body, c)
 
@@ -85,36 +114,27 @@ func addPaymentMethodHandler(c *gin.Context) error {
 	return nil
 }
 
-//func createIntentHandler(c *gin.Context) error {
-//
-//	authUserEmail, exists := c.Get("userEmail")
-//	if !exists {
-//		return jsonHelper.ApiError{
-//			Err:    "User unauthorized",
-//			Status: 401,
-//		}
-//	}
-//	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
-//	if err != nil {
-//		return jsonHelper.ApiError{
-//			Err:    "User does not exist",
-//			Status: 400,
-//		}
-//	}
-//
-//
-//
-//	c.JSON(200, gin.H{"message":"successfully added subscription"})
-//	return nil
-//}
+type CreateSubscriptionRequest struct {
+	SubscriptionType string `json:"subscriptionType"`
+}
 
+// @Summary Create subscription
+// @Tags posts
+// @Description Create subscription
+// @ID CreateSub
+// @Accept json
+// @Produce json
+// @Param request body controllers.CreateSubscriptionRequest true "Card data"
+// @Success 200 {string} a
+// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /payments/subscription [post]
 func subscriptionСreationHandler(c *gin.Context) error {
 
 	paymentsService := payments.NewStripePaymentService()
 
-	var body struct {
-		SubscriptionType string `json:"subscriptionType"`
-	}
+	var body CreateSubscriptionRequest
 
 	jsonHelper.BindWithException(&body, c)
 

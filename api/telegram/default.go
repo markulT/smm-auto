@@ -59,7 +59,7 @@ type SendAudioMessageRequest struct {
 	ChatId  string                `json:"chat_id"`
 }
 
-func SendMessage(text string, chatId string) {
+func SendMessage(text string, chatId string) error {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMessage"
 	sendMessageRequest := SendMessageRequest{
 		Text:                  "" + text + "",
@@ -69,38 +69,62 @@ func SendMessage(text string, chatId string) {
 		ChatId:                chatId,
 	}
 	//payload := strings.NewReader("{\"text\":\"Хочу присоромити одну дамочку\",\"parse_mode\":\"Optional\",\"disable_web_page_preview\":false,\"disable_notification\":false,\"reply_to_message_id\":null,\"chat_id\":\"@smm_auto_test\"}")
-	jsonData, _ := json.Marshal(sendMessageRequest)
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	jsonData, err := json.Marshal(sendMessageRequest)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
 
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("User-Agent", "Telegram Bot SDK - (https://github.com/irazasyed/telegram-bot-sdk)")
 	req.Header.Add("content-type", "application/json")
 
-	res, _ := http.DefaultClient.Do(req)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
 
 	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
+	body, err := io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
 
 	fmt.Println(string(body))
+	return nil
 }
 
-func SendDice()  {
+func SendDice() error {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendDice"
 	var reqBody struct {
 		ChatId string `json:"chat_id"`
 	}
 	reqBody.ChatId = "@smm_auto_test"
-	jsonData, _ := json.Marshal(reqBody)
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	jsonData, err := json.Marshal(reqBody)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("User-Agent", "Telegram Bot SDK - (https://github.com/irazasyed/telegram-bot-sdk)")
 	req.Header.Add("content-type", "application/json")
-	res, _ := http.DefaultClient.Do(req)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
 
 	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
-
-	fmt.Println(string(body))
+	_, err = io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func SendMediaGroupLinks(links []string, caption string) (message string, err error) {
@@ -558,7 +582,7 @@ func SendVideoNote(file *multipart.FileHeader, chatId string) (message string, e
 	return "success", nil
 }
 
-func SendLocation(latitude string, longitude string, chatId string) {
+func SendLocation(latitude string, longitude string, chatId string) error {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendLocation"
 	sendMessageRequest := SendLocationRequest{
 		Latitude:             latitude,
@@ -567,22 +591,32 @@ func SendLocation(latitude string, longitude string, chatId string) {
 		ProximityAlertRadius: "90000",
 	}
 	//payload := strings.NewReader("{\"text\":\"Хочу присоромити одну дамочку\",\"parse_mode\":\"Optional\",\"disable_web_page_preview\":false,\"disable_notification\":false,\"reply_to_message_id\":null,\"chat_id\":\"@smm_auto_test\"}")
-	jsonData, _ := json.Marshal(sendMessageRequest)
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	jsonData, err := json.Marshal(sendMessageRequest)
+
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
 
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("User-Agent", "Telegram Bot SDK - (https://github.com/irazasyed/telegram-bot-sdk)")
 	req.Header.Add("content-type", "application/json")
 
-	res, _ := http.DefaultClient.Do(req)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
 
 	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
+	_, err = io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
 
-	fmt.Println(string(body))
+	return nil
 }
 
-func SendVenue(latitude string, longitude string, title string, address string, chatId string) {
+func SendVenue(latitude string, longitude string, title string, address string, chatId string) error {
 	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVenue"
 	sendMessageRequest := SendVenueRequest{
 		Latitude:     latitude,
@@ -592,18 +626,30 @@ func SendVenue(latitude string, longitude string, title string, address string, 
 		FoursquareId: "16015",
 		ChatId:       chatId,
 	}
-	jsonData, _ := json.Marshal(sendMessageRequest)
-	req, _ := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	jsonData, err := json.Marshal(sendMessageRequest)
+	if err != nil {
+		return err
+	}
+	req, err := http.NewRequest("POST", url, bytes.NewBuffer(jsonData))
+	if err != nil {
+		return err
+	}
 
 	req.Header.Add("accept", "application/json")
 	req.Header.Add("User-Agent", "Telegram Bot SDK - (https://github.com/irazasyed/telegram-bot-sdk)")
 	req.Header.Add("content-type", "application/json")
 
-	res, _ := http.DefaultClient.Do(req)
+	res, err := http.DefaultClient.Do(req)
+	if err != nil {
+		return err
+	}
 
 	defer res.Body.Close()
-	body, _ := io.ReadAll(res.Body)
+	_, err = io.ReadAll(res.Body)
+	if err != nil {
+		return err
+	}
+	return nil
 
-	fmt.Println(string(body))
 }
 
