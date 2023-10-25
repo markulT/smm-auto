@@ -2,9 +2,11 @@ package payments
 
 import (
 	"github.com/stripe/stripe-go/v75"
+	"github.com/stripe/stripe-go/v75/checkout/session"
 	"github.com/stripe/stripe-go/v75/customer"
 	"github.com/stripe/stripe-go/v75/paymentmethod"
 	"github.com/stripe/stripe-go/v75/plan"
+	"github.com/stripe/stripe-go/v75/setupintent"
 	"github.com/stripe/stripe-go/v75/subscription"
 )
 
@@ -15,6 +17,10 @@ type PaymentService interface {
 	AddPaymentMethod(cd CardData) (*stripe.PaymentMethod,error)
 	AttachPaymentMethodToCustomer(pmid string, customerID string) error
 	GetSubPlans() []*stripe.Plan
+	InitSetupIntent(cid string, paymentMethodType string) error
+	GetSetupIntent(setid string) (*stripe.SetupIntent, error)
+	CreateSetupIntent(cid string) (*stripe.SetupIntent,error)
+	GetCustomerByID(cid string) (*stripe.Customer, error)
 }
 
 type stripePaymentService struct {
@@ -22,6 +28,53 @@ type stripePaymentService struct {
 
 func NewStripePaymentService() PaymentService {
 	return &stripePaymentService{}
+}
+
+func (s *stripePaymentService) GetCustomerByID(cid string) (*stripe.Customer, error) {
+	c, err := customer.Get(cid, nil)
+	if err != nil {
+		return &stripe.Customer{},err
+	}
+	return c, nil
+}
+
+func (s *stripePaymentService) CreateSetupIntent(cid string) (*stripe.SetupIntent, error) {
+	params := &stripe.SetupIntentParams{
+		AutomaticPaymentMethods: &stripe.SetupIntentAutomaticPaymentMethodsParams{
+			Enabled: stripe.Bool(true),
+		},
+		Customer: stripe.String(cid),
+	}
+	si, err := setupintent.New(params)
+	if err != nil {
+		return &stripe.SetupIntent{}, err
+	}
+	return si, nil
+}
+
+
+func (s *stripePaymentService) GetSetupIntent(setid string) (*stripe.SetupIntent, error) {
+	params := &stripe.SetupIntentParams{};
+	result, err := setupintent.Get(setid, params)
+	if err != nil {
+		return &stripe.SetupIntent{},err
+	}
+	return result, nil
+}
+
+func (s *stripePaymentService) InitSetupIntent(cid string, paymentMethodType string) error {
+	params := &stripe.CheckoutSessionParams{
+		PaymentMethodTypes: stripe.StringSlice([]string{
+			paymentMethodType,
+		}),
+		Mode: stripe.String(string(stripe.CheckoutSessionModeSetup)),
+		Customer: stripe.String(cid),
+	}
+	_, err := session.New(params)
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (s *stripePaymentService) GetSubPlans() []*stripe.Plan {

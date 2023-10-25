@@ -4,25 +4,180 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v75"
+	"github.com/stripe/stripe-go/v75/webhook"
 	"golearn/repository"
 	mongoRepository "golearn/repository"
 	"golearn/utils/auth"
 	"golearn/utils/jsonHelper"
 	"golearn/utils/payments"
+	"io"
+	"os"
 )
 
 func SetupPaymentRoutes(r *gin.Engine) {
 	paymentGroup := r.Group("/payment")
 	paymentGroup.GET("/plans/", jsonHelper.MakeHttpHandler(getSubPlans))
 	paymentGroup.Use(auth.AuthMiddleware)
-	paymentGroup.Use(payments.PaymentMiddleware)
+	//paymentGroup.Use(payments.PaymentMiddleware)
 	//paymentGroup.POST("/intent", jsonHelper.MakeHttpHandler(createIntentHandler))
 	paymentGroup.POST("/subscription", jsonHelper.MakeHttpHandler(subscriptionСreationHandler))
 	paymentGroup.GET("/customerExists", customerExistsHandler)
 	paymentGroup.POST("/paymentMethod/add", jsonHelper.MakeHttpHandler(addPaymentMethodHandler))
+	paymentGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(initSetupIntentHandler))
+	paymentGroup.POST("/setupIntent/create", jsonHelper.MakeHttpHandler(createSetupIntent))
 
 	webHookGroup := r.Group("/stripeWebhook")
 	webHookGroup.POST("/subscribe",subscriptionWebhookHandler)
+	webHookGroup.POST("/setupIntent",jsonHelper.MakeHttpHandler(setupIntentWebhookHandler))
+}
+
+type CreateSetupIntentRequest struct {}
+type CreateSetupIntentResponse struct {
+	SetupClientSecret string `json:"setupClientSecret"`
+	CustomerID string `json:"customerID"`
+}
+
+
+func createSetupIntent(c *gin.Context) error {
+
+	paymentsService := payments.NewStripePaymentService()
+
+	var body CreateSetupIntentRequest
+	jsonHelper.BindWithException(&body, c)
+
+	userEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "Unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", userEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+
+	si, err := paymentsService.CreateSetupIntent(user.CustomerID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+	customer, err := paymentsService.GetCustomerByID(user.CustomerID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+	c.JSON(200, gin.H{
+		"setupClientSecret":si.ClientSecret,
+		"customerID":customer.ID,
+	})
+	return nil
+}
+
+
+func setupIntentWebhookHandler(c *gin.Context) error {
+
+	paymentsService := payments.NewStripePaymentService()
+
+	requestBody, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
+	}
+	endpointSecret := os.Getenv("checkoutSessionCompletedSecret")
+
+	event, err := webhook.ConstructEvent(requestBody, c.GetHeader("Stripe-Signature"), endpointSecret)
+	fmt.Println(event)
+	fmt.Println(event.Type)
+	switch event.Type {
+	case "setup_intent.succeeded":
+		fmt.Println(event)
+	case "checkout.session.completed":
+		intent, err := paymentsService.GetSetupIntent(event.Data.Object["setup_intent"].(string))
+		if err != nil {
+			return jsonHelper.ApiError{
+				Err:    err.Error(),
+				Status: 500,
+			}
+		}
+		user, err := mongoRepository.GetUserByEmail(event.Data.Object["customer_email"].(string))
+		if err != nil {
+			return jsonHelper.ApiError{
+				Err:    err.Error(),
+				Status: 500,
+			}
+		}
+		err = paymentsService.AttachPaymentMethodToCustomer(intent.PaymentMethod.ID, user.CustomerID)
+		if err != nil {
+			return jsonHelper.ApiError{
+				Err:    err.Error(),
+				Status: 500,
+			}
+		}
+		c.JSON(200, gin.H{})
+	default:
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
+	}
+
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
+	}
+
+	return nil
+}
+
+type InitSetupIntentRequest struct {
+	PaymentMethod string `json:"paymentMethod"`
+}
+type InitSetupIntentResponse struct {
+
+}
+
+func initSetupIntentHandler(c *gin.Context) error {
+
+	paymentService := payments.NewStripePaymentService()
+
+	var body InitSetupIntentRequest
+	jsonHelper.BindWithException(&body, c)
+	userEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "Unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", userEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+
+	err = paymentService.InitSetupIntent(user.CustomerID, body.PaymentMethod)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+	c.JSON(200, gin.H{"status":"success"})
+	return nil
 }
 
 type GetSubPlansResponse struct {
