@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v75"
+	"github.com/stripe/stripe-go/v75/paymentmethod"
 	"github.com/stripe/stripe-go/v75/webhook"
 	"golearn/repository"
 	mongoRepository "golearn/repository"
@@ -25,18 +26,17 @@ func SetupPaymentRoutes(r *gin.Engine) {
 	paymentGroup.POST("/paymentMethod/add", jsonHelper.MakeHttpHandler(addPaymentMethodHandler))
 	paymentGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(initSetupIntentHandler))
 	paymentGroup.POST("/setupIntent/create", jsonHelper.MakeHttpHandler(createSetupIntent))
-
+	paymentGroup.GET("/paymentMethod/getAll", paymentMethodsHandler)
 	webHookGroup := r.Group("/stripeWebhook")
-	webHookGroup.POST("/subscribe",subscriptionWebhookHandler)
-	webHookGroup.POST("/setupIntent",jsonHelper.MakeHttpHandler(setupIntentWebhookHandler))
+	webHookGroup.POST("/subscribe", subscriptionWebhookHandler)
+	webHookGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(setupIntentWebhookHandler))
 }
 
-type CreateSetupIntentRequest struct {}
+type CreateSetupIntentRequest struct{}
 type CreateSetupIntentResponse struct {
 	SetupClientSecret string `json:"setupClientSecret"`
-	CustomerID string `json:"customerID"`
+	CustomerID        string `json:"customerID"`
 }
-
 
 func createSetupIntent(c *gin.Context) error {
 
@@ -75,12 +75,11 @@ func createSetupIntent(c *gin.Context) error {
 		}
 	}
 	c.JSON(200, gin.H{
-		"setupClientSecret":si.ClientSecret,
-		"customerID":customer.ID,
+		"setupClientSecret": si.ClientSecret,
+		"customerID":        customer.ID,
 	})
 	return nil
 }
-
 
 func setupIntentWebhookHandler(c *gin.Context) error {
 
@@ -145,7 +144,6 @@ type InitSetupIntentRequest struct {
 	PaymentMethod string `json:"paymentMethod"`
 }
 type InitSetupIntentResponse struct {
-
 }
 
 func initSetupIntentHandler(c *gin.Context) error {
@@ -176,7 +174,7 @@ func initSetupIntentHandler(c *gin.Context) error {
 			Status: 500,
 		}
 	}
-	c.JSON(200, gin.H{"status":"success"})
+	c.JSON(200, gin.H{"status": "success"})
 	return nil
 }
 
@@ -199,15 +197,15 @@ func getSubPlans(c *gin.Context) error {
 
 	paymentsService := payments.NewStripePaymentService()
 	planList := paymentsService.GetSubPlans()
-	c.JSON(200, gin.H{"plans":planList})
+	c.JSON(200, gin.H{"plans": planList})
 	return nil
 }
 
 type AddPaymentMethodRequest struct {
 	CardNumber string `json:"cardNumber"`
-	ExpMonth int64 `json:"expMonth"`
-	ExpYear int64 `json:"expYear"`
-	CVC string `json:"cvc"`
+	ExpMonth   int64  `json:"expMonth"`
+	ExpYear    int64  `json:"expYear"`
+	CVC        string `json:"cvc"`
 }
 
 // @Summary Add payment method
@@ -265,7 +263,7 @@ func addPaymentMethodHandler(c *gin.Context) error {
 			Status: 500,
 		}
 	}
-	c.JSON(200, gin.H{"status":"Successfully added payment method"})
+	c.JSON(200, gin.H{"status": "Successfully added payment method"})
 	return nil
 }
 
@@ -310,7 +308,7 @@ func subscriptionСreationHandler(c *gin.Context) error {
 		}
 	}
 
-	subscriptionID,err := paymentsService.CreateSubscription(user.CustomerID, body.SubscriptionType)
+	subscriptionID, err := paymentsService.CreateSubscription(user.CustomerID, body.SubscriptionType)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    "Internal server error : " + err.Error(),
@@ -326,26 +324,55 @@ func subscriptionСreationHandler(c *gin.Context) error {
 		}
 	}
 
-	c.JSON(200, gin.H{"message":"successfully added subscription"})
+	c.JSON(200, gin.H{"message": "successfully added subscription"})
 	return nil
 }
 
-func customerExistsHandler(c *gin.Context)  {
+func customerExistsHandler(c *gin.Context) {
 	userEmail, exists := c.Get("userEmail")
 	if !exists {
-		c.JSON(403, gin.H{"error":"Invalid token"})
+		c.JSON(403, gin.H{"error": "Invalid token"})
 		c.Abort()
 		return
 	}
 	stripeService := payments.NewStripePaymentService()
 	customerExists, _ := stripeService.CustomerExists(fmt.Sprintf("%d", userEmail))
 	if !customerExists {
-		c.JSON(401, gin.H{"customerExists":"false"})
+		c.JSON(401, gin.H{"customerExists": "false"})
 		c.Abort()
 		return
 	}
 
-	c.JSON(200, gin.H{"customerExists":"true"})
+	c.JSON(200, gin.H{"customerExists": "true"})
+}
+
+func paymentMethodsHandler(c *gin.Context) {
+	userEmail, exists := c.Get("userEmail")
+	if !exists {
+		c.JSON(403, gin.H{"error": "Invalid token"})
+		c.Abort()
+		return
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", userEmail))
+	if err != nil {
+		c.JSON(500, gin.H{"error": err.Error()})
+		c.Abort()
+		return
+	}
+	fmt.Println(user.CustomerID)
+	var paymentMethods []stripe.PaymentMethod
+
+	params := &stripe.PaymentMethodListParams{
+		Customer: stripe.String(user.CustomerID),
+		Type:     stripe.String("card"),
+	}
+	i := paymentmethod.List(params)
+	for i.Next() {
+		pm := i.PaymentMethod()
+		paymentMethods = append(paymentMethods, *pm)
+	}
+
+	c.JSON(200, gin.H{"paymentMethods": paymentMethods})
 }
 
 func subscriptionWebhookHandler(c *gin.Context) {

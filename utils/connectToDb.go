@@ -26,12 +26,12 @@ var DB *mongo.Database
 func ConnectToDb() {
 
 	mongoUri := os.Getenv("DB_URL")
-	mongoOptions:=options.Client().ApplyURI(mongoUri)
+	mongoOptions := options.Client().ApplyURI(mongoUri)
 	client, err := mongo.Connect(context.TODO(), mongoOptions)
 	if err != nil {
 		log.Println("Error while connecting to database at /utils/connectToDb.go")
 		log.Fatal(err)
 	}
-	DB = client.Database("smm-auto")
+	DB = client.Database("docker-test")
 
 }

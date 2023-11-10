@@ -1,6 +1,7 @@
 package payments
 
 import (
+	"fmt"
 	"github.com/stripe/stripe-go/v75"
 	"github.com/stripe/stripe-go/v75/checkout/session"
 	"github.com/stripe/stripe-go/v75/customer"
@@ -14,12 +15,12 @@ type PaymentService interface {
 	CreateCustomer(string) (string, error)
 	CustomerExists(string) (bool, error)
 	CreateSubscription(email string, subscriptionID string) (subID string, err error)
-	AddPaymentMethod(cd CardData) (*stripe.PaymentMethod,error)
+	AddPaymentMethod(cd CardData) (*stripe.PaymentMethod, error)
 	AttachPaymentMethodToCustomer(pmid string, customerID string) error
 	GetSubPlans() []*stripe.Plan
 	InitSetupIntent(cid string, paymentMethodType string) error
 	GetSetupIntent(setid string) (*stripe.SetupIntent, error)
-	CreateSetupIntent(cid string) (*stripe.SetupIntent,error)
+	CreateSetupIntent(cid string) (*stripe.SetupIntent, error)
 	GetCustomerByID(cid string) (*stripe.Customer, error)
 }
 
@@ -33,7 +34,7 @@ func NewStripePaymentService() PaymentService {
 func (s *stripePaymentService) GetCustomerByID(cid string) (*stripe.Customer, error) {
 	c, err := customer.Get(cid, nil)
 	if err != nil {
-		return &stripe.Customer{},err
+		return &stripe.Customer{}, err
 	}
 	return c, nil
 }
@@ -52,12 +53,11 @@ func (s *stripePaymentService) CreateSetupIntent(cid string) (*stripe.SetupInten
 	return si, nil
 }
 
-
 func (s *stripePaymentService) GetSetupIntent(setid string) (*stripe.SetupIntent, error) {
-	params := &stripe.SetupIntentParams{};
+	params := &stripe.SetupIntentParams{}
 	result, err := setupintent.Get(setid, params)
 	if err != nil {
-		return &stripe.SetupIntent{},err
+		return &stripe.SetupIntent{}, err
 	}
 	return result, nil
 }
@@ -67,7 +67,7 @@ func (s *stripePaymentService) InitSetupIntent(cid string, paymentMethodType str
 		PaymentMethodTypes: stripe.StringSlice([]string{
 			paymentMethodType,
 		}),
-		Mode: stripe.String(string(stripe.CheckoutSessionModeSetup)),
+		Mode:     stripe.String(string(stripe.CheckoutSessionModeSetup)),
 		Customer: stripe.String(cid),
 	}
 	_, err := session.New(params)
@@ -103,21 +103,21 @@ func (s *stripePaymentService) AttachPaymentMethodToCustomer(pmid string, custom
 	return nil
 }
 
-func (s *stripePaymentService) AddPaymentMethod(cd CardData) (*stripe.PaymentMethod,error) {
+func (s *stripePaymentService) AddPaymentMethod(cd CardData) (*stripe.PaymentMethod, error) {
 
 	params := &stripe.PaymentMethodParams{
 		Card: &stripe.PaymentMethodCardParams{
-			Number: stripe.String(cd.CardNumber),
+			Number:   stripe.String(cd.CardNumber),
 			ExpMonth: &cd.ExpMonth,
-			ExpYear: &cd.ExpYear,
-			CVC: stripe.String(cd.CVC),
+			ExpYear:  &cd.ExpYear,
+			CVC:      stripe.String(cd.CVC),
 		},
 		Type: stripe.String("card"),
 	}
 	pm, err := paymentmethod.New(params)
 
 	if err != nil {
-		return &stripe.PaymentMethod{},err
+		return &stripe.PaymentMethod{}, err
 	}
 
 	return pm, nil
@@ -125,24 +125,24 @@ func (s *stripePaymentService) AddPaymentMethod(cd CardData) (*stripe.PaymentMet
 }
 
 func (s *stripePaymentService) CreateSubscription(customerID string, subscriptionID string) (stripeSubscriptionID string, err error) {
-	if err:=checkIfPlanExists(subscriptionID);!err {
-		return "",SubscriptionDoesNotExistException{}
+	if err := checkIfPlanExists(subscriptionID); !err {
+		return "", SubscriptionDoesNotExistException{}
 	}
 	params := &stripe.SubscriptionParams{
-		Customer: stripe.String(customerID),
-		Items: []*stripe.SubscriptionItemsParams{{Price: stripe.String(subscriptionID)}},
+		Customer:          stripe.String(customerID),
+		Items:             []*stripe.SubscriptionItemsParams{{Price: stripe.String(subscriptionID)}},
 		ProrationBehavior: stripe.String("always_invoice"),
 	}
 
 	subscriptionInfo, err := subscription.New(params)
 	if err != nil {
-		return "",err
+		return "", err
 	}
-	return subscriptionInfo.ID,nil
+	return subscriptionInfo.ID, nil
 }
 
 func (s *stripePaymentService) CreateCustomer(email string) (string, error) {
-	params:=&stripe.CustomerParams{
+	params := &stripe.CustomerParams{
 		Email: &email,
 	}
 	c, err := customer.New(params)
@@ -156,8 +156,11 @@ func (s *stripePaymentService) CustomerExists(email string) (bool, error) {
 	params := &stripe.CustomerListParams{
 		Email: stripe.String(email),
 	}
+	fmt.Print(email + "email")
 
 	i := customer.List(params)
+
+	fmt.Print(params)
 
 	for i.Next() {
 		c := i.Customer()
