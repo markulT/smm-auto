@@ -7,6 +7,7 @@ import (
 	"golang.org/x/crypto/bcrypt"
 	"golearn/models"
 	"golearn/repository"
+	mongoRepository "golearn/repository"
 	"golearn/utils/auth"
 	"golearn/utils/jsonHelper"
 	"golearn/utils/payments"
@@ -17,6 +18,10 @@ func SetupAuthRoutes(r *gin.Engine) {
 	authGroup.POST("/login", jsonHelper.MakeHttpHandler(login))
 	authGroup.POST("/refresh", jsonHelper.MakeHttpHandler(refresh))
 	authGroup.POST("/signup", jsonHelper.MakeHttpHandler(signup))
+
+	authGroup.Use(auth.AuthMiddleware)
+
+	authGroup.POST("/setDeviceToken", jsonHelper.MakeHttpHandler(setDeviceTokenHandler))
 }
 
 type LoginRequestBody struct {
@@ -29,6 +34,42 @@ type AuthResponse struct {
 	AccessToken string `json:"accessToken"`
 }
 
+type SetDeviceTokenRequest struct {
+	DeviceToken string `json:"deviceToken"`
+}
+
+func setDeviceTokenHandler(c *gin.Context) error {
+
+	var body SetDeviceTokenRequest
+	jsonHelper.BindWithException(&body, c)
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "User does not exist",
+			Status: 404,
+		}
+	}
+
+	err = mongoRepository.SetUsersDeviceToken(user.ID, body.DeviceToken)
+
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+
+	c.JSON(200, nil)
+	return nil
+}
 
 // @Summary Login
 // @Tags auth

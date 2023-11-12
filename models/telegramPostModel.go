@@ -15,6 +15,7 @@ type Post struct {
 	UserID		uuid.UUID `bson:"userId" json:"userId"`
 	Files 		[]uuid.UUID `bson:"files" json:"files"`
 	Scheduled 	time.Time `bson:"scheduled,omitempty" json:"scheduled"`
+	DeviceToken string `bson:"deviceToken"`
 }
 //a
 

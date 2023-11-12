@@ -25,5 +25,6 @@ type User struct {
 	SubscriptionType int `bson:"subscriptionType"`
 	Role Role
 	CustomerID string 	`bson:"customerID"`
+	DeviceToken string `bson:"deviceToken" json:"deviceToken"`
 }
 

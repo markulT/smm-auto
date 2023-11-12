@@ -18,12 +18,36 @@ type PostRepository interface {
 	DeletePostByID(ctx context.Context, uuid2 uuid.UUID) bool
 	GetPostByImageName(ctx context.Context, imageName uuid.UUID) (models.Post,error)
 	GetPostsByDate(c context.Context, scheduled time.Time,userId uuid.UUID, wg *sync.WaitGroup, respch chan []models.Post)
+	GetAllArchivedPostsByUserID(c context.Context, userID uuid.UUID) ([]models.Post, error)
 }
 
 type postRepositoryImpl struct {}
 
 func NewPostRepository() PostRepository {
 	return &postRepositoryImpl{}
+}
+
+func (p *postRepositoryImpl) GetAllArchivedPostsByUserID(c context.Context, userID uuid.UUID) ([]models.Post, error) {
+	postCollection := utils.DB.Collection("posts")
+	postsCursor, err := postCollection.Find(c, bson.M{"userId":userID})
+	if err != nil {
+		return nil, err
+	}
+	defer postsCursor.Close(c)
+	var posts []models.Post
+	for postsCursor.Next(c) {
+		var post models.Post
+		if err := postsCursor.Decode(&post);err!=nil {
+			return nil, err
+		}
+		posts = append(posts, post)
+	}
+
+	if err := postsCursor.Err();err!=nil {
+		return nil, err
+	}
+
+	return posts, nil
 }
 
 func (p *postRepositoryImpl) GetPostsByDate(c context.Context, scheduled time.Time, userId uuid.UUID, wg *sync.WaitGroup, respch chan []models.Post )  {

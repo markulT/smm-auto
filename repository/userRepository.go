@@ -2,12 +2,21 @@ package repository
 
 import (
 	"context"
+	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"go.mongodb.org/mongo-driver/bson"
 	"golearn/models"
 	"golearn/utils"
 )
 
+func SetUsersDeviceToken(userID uuid.UUID, token string) error {
+	var usersCollection = utils.DB.Collection("users")
+	err := usersCollection.FindOneAndUpdate(context.Background(),bson.M{"_id":userID}, bson.M{"deviceToken":token})
+	if err.Err()!=nil{
+		return err.Err()
+	}
+	return nil
+}
 
 func GetUserByEmail(email string) (models.User, error)  {
 	var user models.User

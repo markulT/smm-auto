@@ -26,13 +26,13 @@ type FlatScheduledRelations struct {
 
 
 
-func GetScheduledPostRelations(offset int, limit int) *[]models.Post {
+func GetScheduledPostRelations(offset int, limit int, archived bool) *[]models.Post {
 	var posts []models.Post
 	postsCollection := utils.DB.Collection("posts")
 	reqOptions:=options.Find()
 	reqOptions.SetSkip(int64(offset))
 	reqOptions.SetLimit(int64(limit))
-	cur, err := postsCollection.Find(context.Background(), bson.M{"scheduled":bson.M{"$exists":true, "$ne":nil}}, reqOptions)
+	cur, err := postsCollection.Find(context.Background(), bson.M{"scheduled":bson.M{"$exists":true, "$ne":nil}, "archived":archived}, reqOptions)
 	if err != nil {
 		log.Fatal(err)
 		return nil
@@ -68,6 +68,7 @@ func SaveScheduledPost(post *models.Post) error {
 	}
 	return nil
 }
+
 func UpdateFilesList(pId uuid.UUID, files []uuid.UUID) error {
 	postCollection := utils.DB.Collection("posts")
 	_, err := postCollection.UpdateByID(context.Background(), pId, bson.M{"$set":bson.M{"files":files}})
@@ -78,3 +79,11 @@ func UpdateFilesList(pId uuid.UUID, files []uuid.UUID) error {
 	return nil
 }
 
+func ArchivizePost(pid uuid.UUID) error {
+	postCollection := utils.DB.Collection("posts")
+	_, err := postCollection.UpdateByID(context.Background(), pid, bson.M{"archived":true})
+	if err != nil {
+		return err
+	}
+	return nil
+}

@@ -26,8 +26,10 @@ func SetupPaymentRoutes(r *gin.Engine) {
 	paymentGroup.POST("/paymentMethod/add", jsonHelper.MakeHttpHandler(addPaymentMethodHandler))
 	paymentGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(initSetupIntentHandler))
 	paymentGroup.POST("/setupIntent/create", jsonHelper.MakeHttpHandler(createSetupIntent))
-	paymentGroup.GET("/paymentMethod/getAll", paymentMethodsHandler)
+	paymentGroup.GET("/paymentMethod/getAll", jsonHelper.MakeHttpHandler(paymentMethodsHandler))
+
 	webHookGroup := r.Group("/stripeWebhook")
+
 	webHookGroup.POST("/subscribe", subscriptionWebhookHandler)
 	webHookGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(setupIntentWebhookHandler))
 }
@@ -346,20 +348,21 @@ func customerExistsHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"customerExists": "true"})
 }
 
-func paymentMethodsHandler(c *gin.Context) {
+func paymentMethodsHandler(c *gin.Context) error {
 	userEmail, exists := c.Get("userEmail")
 	if !exists {
-		c.JSON(403, gin.H{"error": "Invalid token"})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    "Invalid token",
+			Status: 403,
+		}
 	}
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", userEmail))
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
-		c.Abort()
-		return
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
 	}
-	fmt.Println(user.CustomerID)
 	var paymentMethods []stripe.PaymentMethod
 
 	params := &stripe.PaymentMethodListParams{
@@ -373,6 +376,7 @@ func paymentMethodsHandler(c *gin.Context) {
 	}
 
 	c.JSON(200, gin.H{"paymentMethods": paymentMethods})
+	return nil
 }
 
 func subscriptionWebhookHandler(c *gin.Context) {

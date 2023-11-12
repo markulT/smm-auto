@@ -506,6 +506,12 @@ func scheduleMessageHandler(c *gin.Context) error {
 		}
 	}
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", body.Time)
 	post := models.Post{
 		Title:       body.Title,
@@ -623,6 +629,22 @@ func schedulePhotoHandler(c *gin.Context) error {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/mediaGroup [post]
 func scheduleMediaGroupHandler(c *gin.Context) error {
+
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
+
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["media"]
 	title := multipart.Value["title"]
@@ -646,6 +668,7 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 		Type:        "mediaGroup",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
+		UserID: user.ID,
 	}
 	err = mongoRepository.SaveScheduledPost(&post)
 	if err != nil {
@@ -716,6 +739,14 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/video [post]
 func scheduleVideoHandler(c *gin.Context) error {
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["video"]
 	title := multipart.Value["title"]
@@ -739,6 +770,7 @@ func scheduleVideoHandler(c *gin.Context) error {
 		Type:        "video",
 		Files:       []uuid.UUID{},
 		Scheduled:   parsedTime,
+		UserID: user.ID,
 	}
 	err = mongoRepository.SaveScheduledPost(&post)
 	if err != nil {

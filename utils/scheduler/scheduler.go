@@ -2,12 +2,12 @@ package scheduler
 
 import (
 	"context"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"golearn/api/telegram"
 	"golearn/models"
 	"golearn/repository"
 	"golearn/utils"
+	"golearn/utils/notifications"
 	"golearn/utils/s3"
 	"io"
 	"os"
@@ -53,32 +53,29 @@ func getTableLength(tableName string) int64 {
 }
 
 func processBatch(start, end int, wg *sync.WaitGroup)  {
-
-	fmt.Println(start, end)
-
 	defer wg.Done()
 
 	var scheduledPosts []models.Post
 
-	scheduledPosts = *repository.GetScheduledPostRelations(start, end-start+1)
+	notificationService := notifications.DefaultNotificationService{}
+
+	scheduledPosts = *repository.GetScheduledPostRelations(start, end-start+1, false)
 
 	for _, scheduledPost := range scheduledPosts {
 		originalTimezone, offset := scheduledPost.Scheduled.Zone()
 		currentTime := time.Now().In(time.FixedZone(originalTimezone, offset))
 		if scheduledPost.Scheduled.Before(currentTime) {
-			fmt.Println(scheduledPost.Type)
 			switch scheduledPost.Type {
 				case "message":
 					telegram.SendMessage(scheduledPost.Text, scheduledPost.ChannelName)
-					err := repository.DeleteScheduledPostById(scheduledPost.ID)
+					err := repository.ArchivizePost(scheduledPost.ID)
 					if err != nil {
 						return
 					}
+					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 				case "photo":
-					fmt.Println("aboba")
 					image, err := s3.GetImage(scheduledPost.Files[0].String())
 					if err != nil {
-						fmt.Println(err)
 						return
 					}
 					_, err = telegram.SendPhoto(image, scheduledPost.Text, scheduledPost.Files[0].String(), scheduledPost.ChannelName)
@@ -89,10 +86,11 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 					if err != nil {
 						return
 					}
-					err = repository.DeleteScheduledPostById(scheduledPost.ID)
+					err = repository.ArchivizePost(scheduledPost.ID)
 					if err != nil {
 						return
 					}
+					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 				case "mediaGroup":
 					var files []*io.Reader
 					var filenames []string
@@ -111,10 +109,11 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 					for _, fileID := range scheduledPost.Files {
 						_ = s3.DeleteMedia(fileID.String())
 					}
-					err = repository.DeleteScheduledPostById(scheduledPost.ID)
+					err = repository.ArchivizePost(scheduledPost.ID)
 					if err != nil {
 						return
 					}
+					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 				case "video":
 					file, err := s3.GetVideo(scheduledPost.Files[0].String())
 					if err != nil {
@@ -124,9 +123,9 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 					if err != nil {
 						return
 					}
-					err = repository.DeleteScheduledPostById(scheduledPost.ID)
+					err = repository.ArchivizePost(scheduledPost.ID)
+					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 				case "audio":
-					fmt.Println("sending scheduled audio")
 					file, err := s3.GetAudio(scheduledPost.Files[0].String())
 					if err != nil {
 						return
@@ -135,9 +134,9 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 					if err != nil {
 						return
 					}
-					err = repository.DeleteScheduledPostById(scheduledPost.ID)
+					err = repository.ArchivizePost(scheduledPost.ID)
+					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 				case "voice":
-					fmt.Println("sending scheduled voice")
 					file, err := s3.GetAudio(scheduledPost.Files[0].String())
 					if err != nil {
 						return
@@ -146,7 +145,10 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 					if err != nil {
 						return
 					}
-					err = repository.DeleteScheduledPostById(scheduledPost.ID)
+					//err = repository.DeleteScheduledPostById(scheduledPost.ID)
+					err = repository.ArchivizePost(scheduledPost.ID)
+					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+
 			}
 		} else if !scheduledPost.Scheduled.After(currentTime) {
 			return

@@ -4,6 +4,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"golearn/controllers"
 	"golearn/utils"
+	"golearn/utils/archiveCleaner"
 	"golearn/utils/s3"
 	"golearn/utils/scheduler"
 )
@@ -33,8 +34,10 @@ func main() {
 	controllers.SetupBotRoutes(r)
 	controllers.SetupScheduleRoutes(r)
 	controllers.SetupPaymentRoutes(r)
+	controllers.SetupArchiveRoutes(r)
 
 	go scheduler.FetchAndProcessPosts()
+	go archiveCleaner.RunArchiveCleaner()
 
 	r.Run()
 }
