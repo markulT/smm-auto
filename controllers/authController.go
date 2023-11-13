@@ -22,6 +22,7 @@ func SetupAuthRoutes(r *gin.Engine) {
 	authGroup.Use(auth.AuthMiddleware)
 
 	authGroup.POST("/setDeviceToken", jsonHelper.MakeHttpHandler(setDeviceTokenHandler))
+	authGroup.GET("/profile")
 }
 
 type LoginRequestBody struct {
@@ -36,6 +37,33 @@ type AuthResponse struct {
 
 type SetDeviceTokenRequest struct {
 	DeviceToken string `json:"deviceToken"`
+}
+
+type ProfileResponse struct {
+	Email string
+	FullName string
+}
+
+func getProfileHandler(c *gin.Context) error {
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "User does not exist",
+			Status: 404,
+		}
+	}
+
+
+
+	return nil
 }
 
 func setDeviceTokenHandler(c *gin.Context) error {
