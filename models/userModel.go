@@ -8,23 +8,22 @@ import (
 type Role string
 
 const (
-	RoleAdmin  Role = "admin"
-	RoleUser Role = "user"
+	RoleAdmin     Role = "admin"
+	RoleUser      Role = "user"
 	RoleModerator Role = "moderator"
-	RoleSubUser Role = "sub_user"
+	RoleSubUser   Role = "sub_user"
 )
 
 type User struct {
-	ID        uuid.UUID `bson:"_id" json:"id"`
-	CreatedAt time.Time
-	UpdatedAt time.Time
-	Email    string
-	Password string
-	ChannelList []byte
-	SubscriptionID string `bson:"subscriptionID"`
-	SubscriptionType int `bson:"subscriptionType"`
-	Role Role
-	CustomerID string 	`bson:"customerID"`
-	DeviceToken string `bson:"deviceToken" json:"deviceToken"`
+	ID               uuid.UUID `bson:"_id" json:"id"`
+	CreatedAt        time.Time
+	UpdatedAt        time.Time
+	Email            string
+	Password         string
+	ChannelList      []byte
+	SubscriptionID   string `bson:"subscriptionID"`
+	SubscriptionType int    `bson:"subscriptionType"`
+	Role             Role
+	CustomerID       string `bson:"customerID"`
+	DeviceToken      string `bson:"deviceToken" json:"deviceToken"`
 }
-
