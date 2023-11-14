@@ -20,7 +20,7 @@ type User struct {
 	UpdatedAt time.Time
 	Email    string
 	Password string
-	ChannelList []byte
+	ChannelList []uuid.UUID `bson:"channelList" json:"channelList"`
 	SubscriptionID string `bson:"subscriptionID"`
 	SubscriptionType int `bson:"subscriptionType"`
 	Role Role

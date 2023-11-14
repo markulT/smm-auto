@@ -11,7 +11,7 @@ type NotificationService interface {
 }
 
 type DefaultNotificationService struct {
-	fcmClient *messaging.Client
+	FcmClient *messaging.Client
 }
 
 //func NewDefaultNotificationService() NotificationService {
@@ -20,7 +20,7 @@ type DefaultNotificationService struct {
 
 func (ns *DefaultNotificationService) SendNotification(title, content string, token string) error {
 
-	_, err := ns.fcmClient.Send(context.TODO(),&messaging.Message{
+	_, err := ns.FcmClient.Send(context.TODO(),&messaging.Message{
 		Notification: &messaging.Notification{
 			Title:    title,
 			Body:     content,

@@ -61,7 +61,7 @@ func getProfileHandler(c *gin.Context) error {
 		}
 	}
 
-
+	fmt.Println(user)
 
 	return nil
 }

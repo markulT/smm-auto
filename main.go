@@ -1,6 +1,7 @@
 package main
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
 	"golearn/controllers"
 	"golearn/utils"
@@ -26,8 +27,17 @@ func init() {
 // @securityDefinitions.apiKey ApiKeyAuth
 // @in header
 // @name Authorization
-
 func main() {
+
+	firebaseApp, err := utils.FirebaseInit()
+	if err != nil {
+		panic(err)
+	}
+	firebaseMessagingClient, err := firebaseApp.Messaging(context.Background())
+	if err != nil {
+		panic(err)
+	}
+
 	r := gin.Default()
 
 	controllers.SetupAuthRoutes(r)
@@ -36,7 +46,10 @@ func main() {
 	controllers.SetupPaymentRoutes(r)
 	controllers.SetupArchiveRoutes(r)
 
-	go scheduler.FetchAndProcessPosts()
+	schedulerTask := &scheduler.SchedulerTask{}
+	schedulerTask.FcmClient = firebaseMessagingClient
+
+	go schedulerTask.FetchAndProcessPosts()
 	go archiveCleaner.RunArchiveCleaner()
 
 	r.Run()

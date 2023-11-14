@@ -2,6 +2,7 @@ package scheduler
 
 import (
 	"context"
+	"firebase.google.com/go/messaging"
 	"go.mongodb.org/mongo-driver/bson"
 	"golearn/api/telegram"
 	"golearn/models"
@@ -16,19 +17,23 @@ import (
 	"time"
 )
 
-func FetchAndProcessPosts()  {
+type SchedulerTask struct {
+	FcmClient *messaging.Client
+}
+
+func (s *SchedulerTask) FetchAndProcessPosts()  {
 	ticker := time.NewTicker(10 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 			case <- ticker.C:
-				ProcessPosts()
+				s.ProcessPosts()
 		}
 	}
 }
 
-func ProcessPosts()  {
-	numElements := int(getTableLength("posts"))
+func (s *SchedulerTask) ProcessPosts()  {
+	numElements := int(s.getTableLength("posts"))
 	batchSize, _ :=  strconv.Atoi(os.Getenv("batchSize"))
 	var wg sync.WaitGroup
 	for start:=0;start < numElements; start += batchSize {
@@ -37,12 +42,12 @@ func ProcessPosts()  {
 			end = numElements - 1
 		}
 		wg.Add(1)
-		go processBatch(start, end, &wg)
+		go s.processBatch(start, end, &wg)
 	}
 	wg.Wait()
 }
 
-func getTableLength(tableName string) int64 {
+func (s *SchedulerTask) getTableLength(tableName string) int64 {
 	collection:=utils.DB.Collection(tableName)
 
 	count, err := collection.CountDocuments(context.Background(), bson.D{})
@@ -52,7 +57,7 @@ func getTableLength(tableName string) int64 {
 	return count
 }
 
-func processBatch(start, end int, wg *sync.WaitGroup)  {
+func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 	defer wg.Done()
 
 	var scheduledPosts []models.Post
