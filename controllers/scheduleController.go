@@ -594,6 +594,7 @@ func schedulePhotoHandler(c *gin.Context) error {
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
 	}
+	// a
 	err = mongoRepository.SaveScheduledPost(&post)
 	if err != nil {
 		return jsonHelper.ApiError{
