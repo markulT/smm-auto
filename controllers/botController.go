@@ -1,8 +1,11 @@
 package controllers
 
 import (
+	"context"
 	"github.com/gin-gonic/gin"
+	"github.com/google/uuid"
 	"golearn/api/telegram"
+	mongoRepository "golearn/repository"
 	"golearn/utils/jsonHelper"
 	"io"
 )
@@ -53,7 +56,31 @@ func sendMessageHandler(c *gin.Context) error {
 		}
 	}
 
-	err = telegram.SendMessage(body.Text, body.ChannelName)
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(body.ChannelName)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
+	if channel.AssignedBotToken == "" {
+		return jsonHelper.ApiError{
+			Err:    "Channel has no assigned bot token",
+			Status: 404,
+		}
+	}
+
+	err = telegram.SendMessage(channel.AssignedBotToken,body.Text, channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -83,8 +110,33 @@ func sendAudioHandler(c *gin.Context) error {
 	files := multipart.File["audio"]
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
+	if channel.AssignedBotToken == "" {
+		return jsonHelper.ApiError{
+			Err:    "Channel has no assigned bot token",
+			Status: 404,
+		}
+	}
+
 	for _, file := range files {
-		_, err := telegram.SendAudio(file, caption[0], channelName[0])
+		_, err := telegram.SendAudio(channel.AssignedBotToken,file, caption[0], channel.Name)
 		if err != nil {
 			return jsonHelper.ApiError{
 				Err:    err.Error(),
@@ -114,8 +166,33 @@ func sendVoiceHandler(c *gin.Context) error {
 	files := multipart.File["voice"]
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
+	if channel.AssignedBotToken == "" {
+		return jsonHelper.ApiError{
+			Err:    "Channel has no assigned bot token",
+			Status: 404,
+		}
+	}
+
 	for _, file := range files {
-		_, err := telegram.SendVoice(file, caption[0], channelName[0])
+		_, err := telegram.SendVoice(channel.AssignedBotToken,file, caption[0], channel.Name)
 		if err != nil {
 			return jsonHelper.ApiError{
 				Err:    err.Error(),
@@ -147,6 +224,30 @@ func sendVideoHandler(c *gin.Context) error {
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
 
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
+	if channel.AssignedBotToken == "" {
+		return jsonHelper.ApiError{
+			Err:    "Channel has no assigned bot token",
+			Status: 404,
+		}
+	}
+
 	of, err := files[0].Open()
 	if err != nil {
 		return jsonHelper.ApiError{
@@ -155,7 +256,7 @@ func sendVideoHandler(c *gin.Context) error {
 		}
 	}
 	reader := io.Reader(of)
-	_, err = telegram.SendVideoBytes(reader, files[0].Filename, caption[0], channelName[0])
+	_, err = telegram.SendVideoBytes(channel.AssignedBotToken,reader, files[0].Filename, caption[0], channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -186,8 +287,33 @@ func sendVideoNoteHandler(c *gin.Context) error {
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["videoNote"]
 	channelName := multipart.Value["channelName"]
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
+	if channel.AssignedBotToken == "" {
+		return jsonHelper.ApiError{
+			Err:    "Channel has no assigned bot token",
+			Status: 404,
+		}
+	}
+
 	for _, file := range files {
-		_, err := telegram.SendVideoNote(file, channelName[0])
+		_, err := telegram.SendVideoNote(channel.AssignedBotToken,file, channel.Name)
 		if err != nil {
 			return jsonHelper.ApiError{
 				Err:    err.Error(),
@@ -259,7 +385,31 @@ func sendLocationHandler(c *gin.Context) error {
 		}
 	}
 
-	err = telegram.SendLocation(body.Latitude, body.Longitude, body.ChatId)
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(body.ChatId)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
+	if channel.AssignedBotToken == "" {
+		return jsonHelper.ApiError{
+			Err:    "Channel has no assigned bot token",
+			Status: 404,
+		}
+	}
+
+	err = telegram.SendLocation(channel.AssignedBotToken,body.Latitude, body.Longitude, channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -303,7 +453,31 @@ func sendVenueHandler(c *gin.Context) error {
 		}
 	}
 
-	err = telegram.SendVenue(body.Latitude, body.Longitude, body.Title, body.Address, body.ChatId)
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(body.ChatId)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
+	if channel.AssignedBotToken == "" {
+		return jsonHelper.ApiError{
+			Err:    "Channel has no assigned bot token",
+			Status: 404,
+		}
+	}
+
+	err = telegram.SendVenue(channel.AssignedBotToken,body.Latitude, body.Longitude, body.Title, body.Address, channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -337,6 +511,31 @@ func sendPhotoHandler(c *gin.Context) error {
 	files := multipart.File["photo"]
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
+	if channel.AssignedBotToken == "" {
+		return jsonHelper.ApiError{
+			Err:    "Channel has no assigned bot token",
+			Status: 404,
+		}
+	}
+
 	for _, file := range files {
 		of, err := file.Open()
 		if err != nil {
@@ -346,7 +545,7 @@ func sendPhotoHandler(c *gin.Context) error {
 			}
 		}
 		defer of.Close()
-		_, err = telegram.SendPhoto(of, caption[0], file.Filename, channelName[0])
+		_, err = telegram.SendPhoto(channel.AssignedBotToken,of, caption[0], file.Filename, channel.Name)
 		if err != nil {
 			return jsonHelper.ApiError{
 				Err:    err.Error(),
@@ -377,6 +576,31 @@ func sendMediaGroupHandler(c *gin.Context) error {
 	files := multipart.File["media"]
 	caption := multipart.Value["caption"]
 	chat := multipart.Value["chat"]
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(chat[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
+	if channel.AssignedBotToken == "" {
+		return jsonHelper.ApiError{
+			Err:    "Channel has no assigned bot token",
+			Status: 404,
+		}
+	}
+
 	var filenames []string
 	var fileList []*io.Reader
 	for _, file := range files {
@@ -393,7 +617,7 @@ func sendMediaGroupHandler(c *gin.Context) error {
 		filenames = append(filenames, file.Filename)
 	}
 	//_, err := telegram.SendMediaGroupLazy(files, caption[0])
-	_, err := telegram.SendMediaGroup(fileList, filenames, caption[0], chat[0])
+	_, err = telegram.SendMediaGroup(channel.AssignedBotToken,fileList, filenames, caption[0], channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -402,13 +626,4 @@ func sendMediaGroupHandler(c *gin.Context) error {
 	}
 	c.JSON(200, gin.H{"message": "success"})
 	return nil
-}
-
-func sendMediaGroupLinks(c *gin.Context) {
-	_, _ = telegram.SendMediaGroupLinks([]string{"https://i.pinimg.com/originals/61/3b/f8/613bf893ab736ac25c6f6dde1bbacc4a.jpg", "https://sweetpeaskitchen.com/wp-content/uploads/2020/06/Choc-Rasp-Cheesecake-7-1-scaled.jpg"}, "text")
-	c.JSON(200, gin.H{"message": "success"})
-}
-func sendDiceHandler(c *gin.Context) {
-	telegram.SendDice()
-	c.JSON(200, gin.H{"a": "a"})
 }

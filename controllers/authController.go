@@ -124,7 +124,6 @@ func login(c *gin.Context) error {
 			Status: 404,
 		}
 	}
-	fmt.Println(userFromDB.Password)
 	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(body.Password));err!=nil {
 		fmt.Println(err.Error())
 		return jsonHelper.ApiError{

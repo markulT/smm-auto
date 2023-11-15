@@ -360,6 +360,23 @@ func scheduleVoiceHandler(c *gin.Context) error {
 	title := multipart.Value["title"]
 	channelName := multipart.Value["channelName"]
 	scheduledTime := multipart.Value["scheduled"]
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 UTC", scheduledTime[0])
 	file, err := files[0].Open()
 	defer file.Close()
@@ -380,7 +397,7 @@ func scheduleVoiceHandler(c *gin.Context) error {
 		Title:       title[0],
 		ID:          postID,
 		Text:        caption[0],
-		ChannelName: channelName[0],
+		ChannelID: channel.ID,
 		Type:        "voice",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
@@ -427,6 +444,23 @@ func scheduleAudioHandler(c *gin.Context) error {
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
 	scheduledTime := multipart.Value["scheduled"]
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 UTC", scheduledTime[0])
 	file, err := files[0].Open()
 	defer file.Close()
@@ -447,7 +481,7 @@ func scheduleAudioHandler(c *gin.Context) error {
 		ID:          postID,
 		Title:       title[0],
 		Text:        caption[0],
-		ChannelName: channelName[0],
+		ChannelID: channel.ID,
 		Type:        "audio",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
@@ -512,21 +546,36 @@ func scheduleMessageHandler(c *gin.Context) error {
 			Status: 417,
 		}
 	}
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(body.Chat)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", body.Time)
 	post := models.Post{
 		Title:       body.Title,
 		Text:        body.Text,
-		ChannelName: body.Chat,
+		ChannelID: channel.ID,
 		Type:        "message",
 		UserID:      user.ID,
 		Files:       nil,
 		ID:          postId,
 		Scheduled:   parsedTime,
 	}
-	fmt.Println(postId)
 	err = postRepo.SavePostWithId(&post, postId)
 	if err != nil {
-		fmt.Println(err)
 		return jsonHelper.ApiError{
 			Err:    "Error saving post",
 			Status: 500,
@@ -560,6 +609,23 @@ func schedulePhotoHandler(c *gin.Context) error {
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
 	scheduledTime := multipart.Value["scheduled"]
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
 	file, err := files[0].Open()
 	defer file.Close()
@@ -589,7 +655,7 @@ func schedulePhotoHandler(c *gin.Context) error {
 		ID:          postID,
 		UserID:      user.ID,
 		Text:        caption[0],
-		ChannelName: channelName[0],
+		ChannelID: channel.ID,
 		Type:        "photo",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
@@ -651,8 +717,24 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["chat"]
 	scheduledTime := multipart.Value["scheduled"]
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
-	fmt.Println(parsedTime)
 	postID, err := uuid.NewRandom()
 	if err != nil {
 		return jsonHelper.ApiError{
@@ -664,7 +746,7 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 		Title:       title[0],
 		ID:          postID,
 		Text:        caption[0],
-		ChannelName: channelName[0],
+		ChannelID: channel.ID,
 		Type:        "mediaGroup",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
@@ -701,7 +783,6 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 				Status: 400,
 			}
 		}
-		fmt.Println(fileID)
 		fileList = append(fileList, fileID)
 		err = of.Close()
 		if err != nil {
@@ -754,6 +835,22 @@ func scheduleVideoHandler(c *gin.Context) error {
 	channelName := multipart.Value["channelName"]
 	scheduledTime := multipart.Value["scheduled"]
 
+	channelRepo := mongoRepository.NewChannelRepo()
+	chID, err := uuid.Parse(channelName[0])
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error",
+			Status: 500,
+		}
+	}
+	channel, err:=channelRepo.FindByID(context.Background(), chID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Channel with specified ID does not exist",
+			Status: 404,
+		}
+	}
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
 	postID, err := uuid.NewRandom()
 	if err != nil {
@@ -766,7 +863,7 @@ func scheduleVideoHandler(c *gin.Context) error {
 		ID:          postID,
 		Title:       title[0],
 		Text:        caption[0],
-		ChannelName: channelName[0],
+		ChannelID: channel.ID,
 		Type:        "video",
 		Files:       []uuid.UUID{},
 		Scheduled:   parsedTime,

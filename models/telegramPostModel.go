@@ -10,7 +10,7 @@ type Post struct {
 	ID        	uuid.UUID `bson:"_id" json:"id"`
 	Text        string `bson:"text" json:"content"`
 	Title        string `bson:"title" json:"title"`
-	ChannelName string `bson:"channelName" json:"chat"`
+	ChannelID uuid.UUID `bson:"channelId" json:"chat"`
 	Type        string `bson:"type" json:"type"`
 	UserID		uuid.UUID `bson:"userId" json:"userId"`
 	Files 		[]uuid.UUID `bson:"files" json:"files"`

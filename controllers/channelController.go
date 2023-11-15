@@ -16,6 +16,7 @@ func SetupChannelRoutes(r *gin.Engine) {
 	channelGroup.Use(auth.AuthMiddleware)
 
 	channelGroup.DELETE("/delete/:id", jsonHelper.MakeHttpHandler(deleteChannelHandler))
+	channelGroup.GET("/", jsonHelper.MakeHttpHandler(getAllChannels))
 
 	channelGroup.POST("/add", jsonHelper.MakeHttpHandler(addChannelHandler))
 	channelGroup.POST("/assignToken", jsonHelper.MakeHttpHandler(assignTokenToChannelHandler))
@@ -23,6 +24,37 @@ func SetupChannelRoutes(r *gin.Engine) {
 
 type AddChannelRequest struct {
 	ChannelName string `json:"channelName"`
+}
+
+func getAllChannels(c *gin.Context) error {
+
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
+
+	channelRepo:=mongoRepository.NewChannelRepo()
+	channelList, err := channelRepo.GetAllByUserID(context.Background(), user.ID)
+
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Interval server error while fetching channels",
+			Status: 500,
+		}
+	}
+
+	c.JSON(200, gin.H{"channels":channelList})
+	return nil
 }
 
 func addChannelHandler(c *gin.Context) error {

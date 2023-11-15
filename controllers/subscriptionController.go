@@ -97,11 +97,8 @@ func setupIntentWebhookHandler(c *gin.Context) error {
 	endpointSecret := os.Getenv("checkoutSessionCompletedSecret")
 
 	event, err := webhook.ConstructEvent(requestBody, c.GetHeader("Stripe-Signature"), endpointSecret)
-	fmt.Println(event)
-	fmt.Println(event.Type)
 	switch event.Type {
 	case "setup_intent.succeeded":
-		fmt.Println(event)
 	case "checkout.session.completed":
 		intent, err := paymentsService.GetSetupIntent(event.Data.Object["setup_intent"].(string))
 		if err != nil {
