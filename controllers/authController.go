@@ -22,17 +22,17 @@ func SetupAuthRoutes(r *gin.Engine) {
 	authGroup.Use(auth.AuthMiddleware)
 
 	authGroup.POST("/setDeviceToken", jsonHelper.MakeHttpHandler(setDeviceTokenHandler))
-	authGroup.GET("/profile")
+	authGroup.GET("/profile", jsonHelper.MakeHttpHandler(getProfileHandler))
 }
 
 type LoginRequestBody struct {
-	Email string `json:"email"`
+	Email    string `json:"email"`
 	Password string `json:"password"`
 }
 
 type AuthResponse struct {
 	RefreshToken string `json:"refreshToken"`
-	AccessToken string `json:"accessToken"`
+	AccessToken  string `json:"accessToken"`
 }
 
 type SetDeviceTokenRequest struct {
@@ -40,8 +40,10 @@ type SetDeviceTokenRequest struct {
 }
 
 type ProfileResponse struct {
-	Email string
-	FullName string
+	Email            string `json:"email"`
+	ChannelList      []byte
+	SubscriptionID   string `json:"subscriptionID"`
+	SubscriptionType int    `json:"subscriptionType"`
 }
 
 func getProfileHandler(c *gin.Context) error {
@@ -60,9 +62,16 @@ func getProfileHandler(c *gin.Context) error {
 			Status: 404,
 		}
 	}
+	userProfile := ProfileResponse{
+		Email:            user.Email,
+		ChannelList:      user.ChannelList,
+		SubscriptionID:   user.SubscriptionID,
+		SubscriptionType: user.SubscriptionType,
+	}
 
 	fmt.Println(user)
 
+	c.JSON(200, userProfile)
 	return nil
 }
 
@@ -111,21 +120,21 @@ func setDeviceTokenHandler(c *gin.Context) error {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /auth/login [post]
 func login(c *gin.Context) error {
-	var body struct{
-		Email string `json:"email"`
+	var body struct {
+		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 
 	jsonHelper.BindWithException(&body, c)
 	userFromDB, err := repository.GetUserByEmail(body.Email)
-	if err!=nil {
+	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
 			Status: 404,
 		}
 	}
 	fmt.Println(userFromDB.Password)
-	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(body.Password));err!=nil {
+	if err := bcrypt.CompareHashAndPassword([]byte(userFromDB.Password), []byte(body.Password)); err != nil {
 		fmt.Println(err.Error())
 		return jsonHelper.ApiError{
 			Err:    "Invalid password",
@@ -133,12 +142,12 @@ func login(c *gin.Context) error {
 		}
 	}
 	tokens := auth.GenerateTokens(map[string]interface{}{
-		"email":userFromDB.Email,
+		"email":    userFromDB.Email,
 		"password": userFromDB.Password,
 	}, c)
 
 	c.JSON(200, gin.H{
-		"accessToken": tokens.AccessToken,
+		"accessToken":  tokens.AccessToken,
 		"refreshToken": tokens.RefreshToken,
 	})
 	return nil
@@ -164,35 +173,34 @@ func refresh(c *gin.Context) error {
 	jsonHelper.BindWithException(&body, c)
 	var userFromDb models.User
 	email, err := auth.GetSubject(body.RefreshToken)
-	if err!=nil {
+	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
 			Status: 400,
 		}
 	}
 	userFromDb, err = repository.GetUserByEmail(email)
-	if err!=nil {
+	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
 			Status: 400,
 		}
 	}
-	if _, err := auth.Validate(body.RefreshToken);err!=nil {
+	if _, err := auth.Validate(body.RefreshToken); err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
 			Status: 400,
 		}
 	}
 	tokens := auth.GenerateTokens(map[string]interface{}{
-		"email":userFromDb.Email,
+		"email": userFromDb.Email,
 	}, c)
 	c.JSON(200, gin.H{
-		"accessToken":tokens.AccessToken,
-		"refreshToken":tokens.RefreshToken,
+		"accessToken":  tokens.AccessToken,
+		"refreshToken": tokens.RefreshToken,
 	})
 	return nil
 }
-
 
 // @Summary Signup
 // @Tags auth
@@ -207,8 +215,8 @@ func refresh(c *gin.Context) error {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /auth/signup [post]
 func signup(c *gin.Context) error {
-	var body struct{
-		Email string `json:"email"`
+	var body struct {
+		Email    string `json:"email"`
 		Password string `json:"password"`
 	}
 	jsonHelper.BindWithException(&body, c)
@@ -220,14 +228,14 @@ func signup(c *gin.Context) error {
 		}
 	}
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(body.Password), bcrypt.DefaultCost)
-	if err!=nil {
+	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
 			Status: 500,
 		}
 	}
 	userId, err := uuid.NewRandom()
-	if err!=nil {
+	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
 			Status: 500,
@@ -235,10 +243,10 @@ func signup(c *gin.Context) error {
 	}
 	newUser := models.User{ID: userId, Email: body.Email, Password: string(hashedPassword)}
 	tokens := auth.GenerateTokens(map[string]interface{}{
-		"email":    newUser.Email,
+		"email": newUser.Email,
 	}, c)
 
-	if err := repository.SaveUser(&newUser); err!=nil {
+	if err := repository.SaveUser(&newUser); err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
 			Status: 500,
@@ -260,7 +268,7 @@ func signup(c *gin.Context) error {
 		}
 	}
 	c.JSON(200, gin.H{
-		"accessToken": tokens.AccessToken,
+		"accessToken":  tokens.AccessToken,
 		"refreshToken": tokens.RefreshToken,
 	})
 	return nil

@@ -5,6 +5,7 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v75"
 	"github.com/stripe/stripe-go/v75/paymentmethod"
+	"github.com/stripe/stripe-go/v75/price"
 	"github.com/stripe/stripe-go/v75/webhook"
 	"golearn/repository"
 	mongoRepository "golearn/repository"
@@ -27,6 +28,7 @@ func SetupPaymentRoutes(r *gin.Engine) {
 	paymentGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(initSetupIntentHandler))
 	paymentGroup.POST("/setupIntent/create", jsonHelper.MakeHttpHandler(createSetupIntent))
 	paymentGroup.GET("/paymentMethod/getAll", jsonHelper.MakeHttpHandler(paymentMethodsHandler))
+	paymentGroup.GET("/subscriptions/plans", jsonHelper.MakeHttpHandler(getSubscriptionPlans))
 
 	webHookGroup := r.Group("/stripeWebhook")
 
@@ -352,8 +354,8 @@ func paymentMethodsHandler(c *gin.Context) error {
 	userEmail, exists := c.Get("userEmail")
 	if !exists {
 		return jsonHelper.ApiError{
-			Err:    "Invalid token",
-			Status: 403,
+			Err:    "User does not exist",
+			Status: 404,
 		}
 	}
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", userEmail))
@@ -376,6 +378,23 @@ func paymentMethodsHandler(c *gin.Context) error {
 	}
 
 	c.JSON(200, gin.H{"paymentMethods": paymentMethods})
+	return nil
+}
+
+func getSubscriptionPlans(c *gin.Context) error {
+	var prices []stripe.Price
+
+	params := &stripe.PriceListParams{}
+
+	params.Filters.AddFilter("", "", "")
+
+	i := price.List(params)
+	for i.Next() {
+		p := i.Price()
+		prices = append(prices, *p)
+	}
+
+	c.JSON(200, gin.H{"subLevels": prices})
 	return nil
 }
 

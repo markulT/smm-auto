@@ -15,7 +15,9 @@ import (
 	"strconv"
 	"sync"
 	"time"
+
 )
+
 
 type SchedulerTask struct {
 	FcmClient *messaging.Client
@@ -26,8 +28,8 @@ func (s *SchedulerTask) FetchAndProcessPosts()  {
 	defer ticker.Stop()
 	for {
 		select {
-			case <- ticker.C:
-				s.ProcessPosts()
+		case <-ticker.C:
+			s.ProcessPosts()
 		}
 	}
 }
@@ -35,9 +37,10 @@ func (s *SchedulerTask) FetchAndProcessPosts()  {
 func (s *SchedulerTask) ProcessPosts()  {
 	numElements := int(s.getTableLength("posts"))
 	batchSize, _ :=  strconv.Atoi(os.Getenv("batchSize"))
+
 	var wg sync.WaitGroup
-	for start:=0;start < numElements; start += batchSize {
-		end := start + batchSize -1
+	for start := 0; start < numElements; start += batchSize {
+		end := start + batchSize - 1
 		if end >= numElements {
 			end = numElements - 1
 		}
@@ -46,6 +49,7 @@ func (s *SchedulerTask) ProcessPosts()  {
 	}
 	wg.Wait()
 }
+
 
 func (s *SchedulerTask) getTableLength(tableName string) int64 {
 	collection:=utils.DB.Collection(tableName)
@@ -71,89 +75,88 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 		currentTime := time.Now().In(time.FixedZone(originalTimezone, offset))
 		if scheduledPost.Scheduled.Before(currentTime) {
 			switch scheduledPost.Type {
-				case "message":
-					telegram.SendMessage(scheduledPost.Text, scheduledPost.ChannelName)
-					err := repository.ArchivizePost(scheduledPost.ID)
+			case "message":
+				telegram.SendMessage(scheduledPost.Text, scheduledPost.ChannelName)
+				err := repository.ArchivizePost(scheduledPost.ID)
+				if err != nil {
+					return
+				}
+				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+			case "photo":
+				image, err := s3.GetImage(scheduledPost.Files[0].String())
+				if err != nil {
+					return
+				}
+				_, err = telegram.SendPhoto(image, scheduledPost.Text, scheduledPost.Files[0].String(), scheduledPost.ChannelName)
+				if err != nil {
+					return
+				}
+				err = s3.DeleteImage(scheduledPost.Files[0].String())
+				if err != nil {
+					return
+				}
+				err = repository.ArchivizePost(scheduledPost.ID)
+				if err != nil {
+					return
+				}
+				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+			case "mediaGroup":
+				var files []*io.Reader
+				var filenames []string
+				for _, fileID := range scheduledPost.Files {
+					media, err := s3.GetMedia(fileID.String())
 					if err != nil {
 						return
 					}
-					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
-				case "photo":
-					image, err := s3.GetImage(scheduledPost.Files[0].String())
-					if err != nil {
-						return
-					}
-					_, err = telegram.SendPhoto(image, scheduledPost.Text, scheduledPost.Files[0].String(), scheduledPost.ChannelName)
-					if err != nil {
-						return
-					}
-					err = s3.DeleteImage(scheduledPost.Files[0].String())
-					if err != nil {
-						return
-					}
-					err = repository.ArchivizePost(scheduledPost.ID)
-					if err != nil {
-						return
-					}
-					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
-				case "mediaGroup":
-					var files []*io.Reader
-					var filenames []string
-					for _, fileID := range scheduledPost.Files {
-						media, err := s3.GetMedia(fileID.String())
-						if err != nil {
-							return
-						}
-						filenames = append(filenames, fileID.String())
-						files = append(files, &media)
-					}
-					_, err := telegram.SendMediaGroup(files, filenames, scheduledPost.Text, scheduledPost.ChannelName)
-					if err != nil {
-						return
-					}
-					for _, fileID := range scheduledPost.Files {
-						_ = s3.DeleteMedia(fileID.String())
-					}
-					err = repository.ArchivizePost(scheduledPost.ID)
-					if err != nil {
-						return
-					}
-					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
-				case "video":
-					file, err := s3.GetVideo(scheduledPost.Files[0].String())
-					if err != nil {
-						return
-					}
-					_, err = telegram.SendVideoBytes(file, scheduledPost.Files[0].String(), scheduledPost.Text, scheduledPost.ChannelName)
-					if err != nil {
-						return
-					}
-					err = repository.ArchivizePost(scheduledPost.ID)
-					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
-				case "audio":
-					file, err := s3.GetAudio(scheduledPost.Files[0].String())
-					if err != nil {
-						return
-					}
-					_,err = telegram.SendAudioBytes(file, scheduledPost.Text, scheduledPost.ChannelName, scheduledPost.Files[0].String())
-					if err != nil {
-						return
-					}
-					err = repository.ArchivizePost(scheduledPost.ID)
-					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
-				case "voice":
-					file, err := s3.GetAudio(scheduledPost.Files[0].String())
-					if err != nil {
-						return
-					}
-					_,err = telegram.SendVoiceBytes(file, scheduledPost.Text, scheduledPost.ChannelName, scheduledPost.Files[0].String())
-					if err != nil {
-						return
-					}
-					//err = repository.DeleteScheduledPostById(scheduledPost.ID)
-					err = repository.ArchivizePost(scheduledPost.ID)
-					notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
-
+					filenames = append(filenames, fileID.String())
+					files = append(files, &media)
+				}
+				_, err := telegram.SendMediaGroup(files, filenames, scheduledPost.Text, scheduledPost.ChannelName)
+				if err != nil {
+					return
+				}
+				for _, fileID := range scheduledPost.Files {
+					_ = s3.DeleteMedia(fileID.String())
+				}
+				err = repository.ArchivizePost(scheduledPost.ID)
+				if err != nil {
+					return
+				}
+				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+			case "video":
+				file, err := s3.GetVideo(scheduledPost.Files[0].String())
+				if err != nil {
+					return
+				}
+				_, err = telegram.SendVideoBytes(file, scheduledPost.Files[0].String(), scheduledPost.Text, scheduledPost.ChannelName)
+				if err != nil {
+					return
+				}
+				err = repository.ArchivizePost(scheduledPost.ID)
+				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+			case "audio":
+				file, err := s3.GetAudio(scheduledPost.Files[0].String())
+				if err != nil {
+					return
+				}
+				_, err = telegram.SendAudioBytes(file, scheduledPost.Text, scheduledPost.ChannelName, scheduledPost.Files[0].String())
+				if err != nil {
+					return
+				}
+				err = repository.ArchivizePost(scheduledPost.ID)
+				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+			case "voice":
+				file, err := s3.GetAudio(scheduledPost.Files[0].String())
+				if err != nil {
+					return
+				}
+				_, err = telegram.SendVoiceBytes(file, scheduledPost.Text, scheduledPost.ChannelName, scheduledPost.Files[0].String())
+				if err != nil {
+					return
+				}
+				//err = repository.DeleteScheduledPostById(scheduledPost.ID)
+				err = repository.ArchivizePost(scheduledPost.ID)
+				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 			}
 		} else if !scheduledPost.Scheduled.After(currentTime) {
 			return

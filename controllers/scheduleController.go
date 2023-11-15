@@ -668,7 +668,7 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 		Type:        "mediaGroup",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
-		UserID: user.ID,
+		UserID:      user.ID,
 	}
 	err = mongoRepository.SaveScheduledPost(&post)
 	if err != nil {
@@ -747,6 +747,7 @@ func scheduleVideoHandler(c *gin.Context) error {
 		}
 	}
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["video"]
 	title := multipart.Value["title"]
@@ -770,7 +771,7 @@ func scheduleVideoHandler(c *gin.Context) error {
 		Type:        "video",
 		Files:       []uuid.UUID{},
 		Scheduled:   parsedTime,
-		UserID: user.ID,
+		UserID:      user.ID,
 	}
 	err = mongoRepository.SaveScheduledPost(&post)
 	if err != nil {
