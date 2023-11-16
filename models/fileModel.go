@@ -9,4 +9,5 @@ type File struct {
 	BucketName  string `bson:"bucketName"`
 	Type 		string `bson:"type"`
 	PostID		uuid.UUID `bson:"postID,omitempty"`
+	Filename 	string `bson:"filename"`
 }

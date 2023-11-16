@@ -26,19 +26,19 @@ type FlatScheduledRelations struct {
 
 
 
-func GetScheduledPostRelations(offset int, limit int, archived bool) *[]models.Post {
+func GetScheduledPostRelations(c context.Context, offset int, limit int, archived bool) *[]models.Post {
 	var posts []models.Post
 	postsCollection := utils.DB.Collection("posts")
 	reqOptions:=options.Find()
 	reqOptions.SetSkip(int64(offset))
 	reqOptions.SetLimit(int64(limit))
-	cur, err := postsCollection.Find(context.Background(), bson.M{"scheduled":bson.M{"$exists":true, "$ne":nil}, "archived":archived}, reqOptions)
+	cur, err := postsCollection.Find(c, bson.M{"scheduled":bson.M{"$exists":true, "$ne":nil}, "archived":archived}, reqOptions)
 	if err != nil {
 		log.Fatal(err)
 		return nil
 	}
-	defer cur.Close(context.Background())
-	for cur.Next(context.Background()) {
+	defer cur.Close(c)
+	for cur.Next(c) {
 		var post models.Post
 		if err:=cur.Decode(&post);err!=nil {
 			log.Fatal(err)
@@ -51,27 +51,27 @@ func GetScheduledPostRelations(offset int, limit int, archived bool) *[]models.P
 	return &posts
 }
 
-func DeleteScheduledPostById(spId uuid.UUID) error {
+func DeleteScheduledPostById(c context.Context,spId uuid.UUID) error {
 	scheduledCollection := utils.DB.Collection("posts")
-	_, err := scheduledCollection.DeleteOne(context.TODO(), bson.M{"_id":spId})
+	_, err := scheduledCollection.DeleteOne(c, bson.M{"_id":spId})
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func SaveScheduledPost(post *models.Post) error {
+func SaveScheduledPost(c context.Context,post *models.Post) error {
 	postCollection := utils.DB.Collection("posts")
-	_, err := postCollection.InsertOne(context.Background(), post)
+	_, err := postCollection.InsertOne(c, post)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func UpdateFilesList(pId uuid.UUID, files []uuid.UUID) error {
+func UpdateFilesList(c context.Context,pId uuid.UUID, files []uuid.UUID) error {
 	postCollection := utils.DB.Collection("posts")
-	_, err := postCollection.UpdateByID(context.Background(), pId, bson.M{"$set":bson.M{"files":files}})
+	_, err := postCollection.UpdateByID(c, pId, bson.M{"$set":bson.M{"files":files}})
 	if err != nil {
 		fmt.Println(err)
 		return err
@@ -79,9 +79,9 @@ func UpdateFilesList(pId uuid.UUID, files []uuid.UUID) error {
 	return nil
 }
 
-func ArchivizePost(pid uuid.UUID) error {
+func ArchivizePost(c context.Context,pid uuid.UUID) error {
 	postCollection := utils.DB.Collection("posts")
-	_, err := postCollection.UpdateByID(context.Background(), pid, bson.M{"archived":true})
+	_, err := postCollection.UpdateByID(c, pid, bson.M{"archived":true})
 	if err != nil {
 		return err
 	}

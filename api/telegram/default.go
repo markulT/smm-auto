@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"github.com/mymmrac/telego"
 	"github.com/mymmrac/telego/telegoutil"
+	"golearn/models"
 	"io"
 	"mime/multipart"
 	"net/http"
@@ -59,8 +60,8 @@ type SendAudioMessageRequest struct {
 	ChatId  string                `json:"chat_id"`
 }
 
-func SendMessage(text string, chatId string) error {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMessage"
+func SendMessage(botToken string,text string, chatId string) error {
+	url := "https://api.telegram.org/bot" + botToken + "/sendMessage"
 	sendMessageRequest := SendMessageRequest{
 		Text:                  "" + text + "",
 		DisableWebPagePreview: false,
@@ -97,8 +98,8 @@ func SendMessage(text string, chatId string) error {
 	return nil
 }
 
-func SendDice() error {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendDice"
+func SendDice(botToken string) error {
+	url := "https://api.telegram.org/bot" + botToken + "/sendDice"
 	var reqBody struct {
 		ChatId string `json:"chat_id"`
 	}
@@ -127,8 +128,8 @@ func SendDice() error {
 	return nil
 }
 
-func SendMediaGroupLinks(links []string, caption string) (message string, err error) {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendMediaGroup"
+func SendMediaGroupLinks(botToken string,links []string, caption string) (message string, err error) {
+	url := "https://api.telegram.org/bot" + botToken + "/sendMediaGroup"
 
 	var media []map[string]interface{}
 
@@ -182,29 +183,52 @@ func (cnr *CustomReader) Name() string {
 	return cnr.filename
 }
 
-func SendMediaGroup(files []*io.Reader,filenames[]string, caption string, channelName string) (string, error) {
-	bot, err := telego.NewBot(os.Getenv("botToken"), telego.WithDefaultDebugLogger())
+func SendMediaGroup(botToken string,files []*io.Reader,filenames[]string,fileModels []models.File, caption string, channelName string) (string, error) {
+	bot, err := telego.NewBot(botToken, telego.WithDefaultDebugLogger())
 	if err != nil {
 		return "", err
 	}
 	var mediaItems []telego.InputMedia
 	for index,file := range files {
-		customReader := &CustomReader{reader:*file,filename: filenames[index]}
-		media := telegoutil.MediaPhoto(telego.InputFile{
-			File: customReader,
-		})
-		if index == 0 {
-			media = media.WithCaption(caption)
+
+		fileModel := fileModels[index]
+		switch fileModel.Type {
+		case "photo":
+			customReader := &CustomReader{reader:*file,filename: filenames[index]}
+			media := telegoutil.MediaPhoto(telego.InputFile{
+				File: customReader,
+			})
+			if index == 0 {
+				media = media.WithCaption(caption)
+			}
+			mediaItems = append(mediaItems, media)
+		case "video":
+			customReader := &CustomReader{reader:*file,filename: filenames[index]}
+			media := telegoutil.MediaVideo(telego.InputFile{
+				File: customReader,
+			})
+			if index == 0 {
+				media = media.WithCaption(caption)
+			}
+			mediaItems = append(mediaItems, media)
+		case "audio":
+			customReader := &CustomReader{reader:*file,filename: filenames[index]}
+			media := telegoutil.MediaAudio(telego.InputFile{
+				File: customReader,
+			})
+			if index == 0 {
+				media = media.WithCaption(caption)
+			}
+			mediaItems = append(mediaItems, media)
 		}
-		mediaItems = append(mediaItems, media)
 	}
 	mdGroup := telegoutil.MediaGroup(telegoutil.Username(channelName), mediaItems...)
 	_, _ = bot.SendMediaGroup(mdGroup)
 	return "", nil
 }
 
-func SendPhoto(src io.Reader, caption string, fileName string, channelName string) (message string, err error) {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendPhoto"
+func SendPhoto(botToken string,src io.Reader, caption string, fileName string, channelName string) (message string, err error) {
+	url := "https://api.telegram.org/bot" + botToken + "/sendPhoto"
 	fmt.Println(url)
 
 	if err!=nil {
@@ -252,8 +276,8 @@ func SendPhoto(src io.Reader, caption string, fileName string, channelName strin
 }
 
 
-func SendAudio(file *multipart.FileHeader, caption string, chatId string) (message string, err error) {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendAudio"
+func SendAudio(botToken string,file *multipart.FileHeader, caption string, chatId string) (message string, err error) {
+	url := "https://api.telegram.org/bot" + botToken + "/sendAudio"
 	fmt.Println(url)
 	src, err := file.Open()
 	if err != nil {
@@ -294,8 +318,8 @@ func SendAudio(file *multipart.FileHeader, caption string, chatId string) (messa
 	return "success", nil
 }
 
-func SendAudioBytes(reader io.Reader, caption string,chatId string, filename string) (string, error) {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendAudio"
+func SendAudioBytes(botToken string,reader io.Reader, caption string,chatId string, filename string) (string, error) {
+	url := "https://api.telegram.org/bot" + botToken + "/sendAudio"
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
 	imageField, err := writer.CreateFormFile("audio", filename)
@@ -328,8 +352,8 @@ func SendAudioBytes(reader io.Reader, caption string,chatId string, filename str
 	return "success", nil
 }
 
-func SendVoiceBytes(reader io.Reader, caption string,chatId string, filename string) (string, error) {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVoice"
+func SendVoiceBytes(botToken string, reader io.Reader, caption string,chatId string, filename string) (string, error) {
+	url := "https://api.telegram.org/bot" + botToken + "/sendVoice"
 	var requestBody bytes.Buffer
 	writer := multipart.NewWriter(&requestBody)
 	imageField, err := writer.CreateFormFile("voice", filename)
@@ -345,7 +369,6 @@ func SendVoiceBytes(reader io.Reader, caption string,chatId string, filename str
 	_ = writer.WriteField("caption", caption)
 	err = writer.Close()
 	if err != nil {
-		fmt.Println(err)
 		return "", err
 	}
 	req, err := http.NewRequest("POST", url, &requestBody)
@@ -362,8 +385,8 @@ func SendVoiceBytes(reader io.Reader, caption string,chatId string, filename str
 	return "success", nil
 }
 
-func SendVoice(file *multipart.FileHeader, caption string, chatId string) (message string, err error) {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVoice"
+func SendVoice(botToken string,file *multipart.FileHeader, caption string, chatId string) (message string, err error) {
+	url := "https://api.telegram.org/bot" + botToken + "/sendVoice"
 	fmt.Println(url)
 	src, err := file.Open()
 	if err != nil {
@@ -415,9 +438,8 @@ func SendVoice(file *multipart.FileHeader, caption string, chatId string) (messa
 	return "success", nil
 }
 
-func SendVideo(file *os.File, caption string, chatId string, filename string) (string, error) {
-	fmt.Println("sending video")
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVideo"
+func SendVideo(botToken string,file *os.File, caption string, chatId string, filename string) (string, error) {
+	url := "https://api.telegram.org/bot" + botToken + "/sendVideo"
 
 
 	var requestBody bytes.Buffer
@@ -508,8 +530,8 @@ func SendVideo(file *os.File, caption string, chatId string, filename string) (s
 //
 //}
 
-func SendVideoBytes(file io.Reader, filename string, caption string, chatId string) ( string, error) {
-	bot, err := telego.NewBot(os.Getenv("botToken"), telego.WithDefaultDebugLogger())
+func SendVideoBytes(botToken string,file io.Reader, filename string, caption string, chatId string) ( string, error) {
+	bot, err := telego.NewBot(botToken, telego.WithDefaultDebugLogger())
 	if err != nil {
 		return "",err
 	}
@@ -536,8 +558,8 @@ func SendVideoBytes(file io.Reader, filename string, caption string, chatId stri
 
 
 
-func SendVideoNote(file *multipart.FileHeader, chatId string) (message string, err error) {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVideoNote"
+func SendVideoNote(botToken string,file *multipart.FileHeader, chatId string) (message string, err error) {
+	url := "https://api.telegram.org/bot" + botToken + "/sendVideoNote"
 	fmt.Println(url)
 	src, err := file.Open()
 	if err != nil {
@@ -582,8 +604,8 @@ func SendVideoNote(file *multipart.FileHeader, chatId string) (message string, e
 	return "success", nil
 }
 
-func SendLocation(latitude string, longitude string, chatId string) error {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendLocation"
+func SendLocation(botToken string,latitude string, longitude string, chatId string) error {
+	url := "https://api.telegram.org/bot" + botToken + "/sendLocation"
 	sendMessageRequest := SendLocationRequest{
 		Latitude:             latitude,
 		Longitude:            longitude,
@@ -616,8 +638,8 @@ func SendLocation(latitude string, longitude string, chatId string) error {
 	return nil
 }
 
-func SendVenue(latitude string, longitude string, title string, address string, chatId string) error {
-	url := "https://api.telegram.org/bot" + os.Getenv("botToken") + "/sendVenue"
+func SendVenue(botToken string, latitude string, longitude string, title string, address string, chatId string) error {
+	url := "https://api.telegram.org/bot" + botToken + "/sendVenue"
 	sendMessageRequest := SendVenueRequest{
 		Latitude:     latitude,
 		Longitude:    longitude,
