@@ -363,6 +363,7 @@ func scheduleVoiceHandler(c *gin.Context) error {
 	title := multipart.Value["title"]
 	channelName := multipart.Value["channelName"]
 	scheduledTime := multipart.Value["scheduled"]
+	deviceToken := multipart.Value["deviceToken"]
 
 	channelRepo := mongoRepository.NewChannelRepo()
 	chID, err := uuid.Parse(channelName[0])
@@ -404,6 +405,7 @@ func scheduleVoiceHandler(c *gin.Context) error {
 		Type:        "voice",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
+		DeviceToken: deviceToken[0],
 	}
 	err = mongoRepository.SaveScheduledPost(context.Background(),&post)
 	if err != nil {
@@ -450,6 +452,7 @@ func scheduleAudioHandler(c *gin.Context) error {
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
 	scheduledTime := multipart.Value["scheduled"]
+	deviceToken := multipart.Value["deviceToken"]
 
 	channelRepo := mongoRepository.NewChannelRepo()
 	chID, err := uuid.Parse(channelName[0])
@@ -498,6 +501,7 @@ func scheduleAudioHandler(c *gin.Context) error {
 		Type:        "audio",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
+		DeviceToken: deviceToken[0],
 	}
 	savedFile := models.File{
 		ID:         fileID,
@@ -539,6 +543,7 @@ type ScheduleMessageRequest struct {
 	Text  string `json:"text"`
 	Chat  string `json:"chat"`
 	Time  string `json:"scheduled"`
+	DeviceToken string `json:"deviceToken"`
 }
 
 // @Summary Schedule message
@@ -602,6 +607,7 @@ func scheduleMessageHandler(c *gin.Context) error {
 		Files:       nil,
 		ID:          postId,
 		Scheduled:   parsedTime,
+		DeviceToken: body.DeviceToken,
 	}
 	err = postRepo.SavePostWithId(&post, postId)
 	if err != nil {
@@ -639,6 +645,7 @@ func schedulePhotoHandler(c *gin.Context) error {
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
 	scheduledTime := multipart.Value["scheduled"]
+	deviceToken := multipart.Value["deviceToken"]
 
 
 	channelRepo := mongoRepository.NewChannelRepo()
@@ -697,6 +704,7 @@ func schedulePhotoHandler(c *gin.Context) error {
 		Type:        "photo",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
+		DeviceToken: deviceToken[0],
 	}
 	savedFile := models.File{
 		ID:         fileID,
@@ -769,6 +777,7 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 	scheduledTime := multipart.Value["scheduled"]
 
 	fileTypesField := multipart.Value["fileTypes"]
+	deviceToken := multipart.Value["deviceToken"]
 
 	var data []map[string]string
 
@@ -822,6 +831,7 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
 		UserID:      user.ID,
+		DeviceToken: deviceToken[0],
 	}
 	var fileList []uuid.UUID
 	err = mongoRepository.WithTransaction(context.Background(), func(ctx mongo.SessionContext) (interface{}, error) {
@@ -906,6 +916,7 @@ func scheduleVideoHandler(c *gin.Context) error {
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
 	scheduledTime := multipart.Value["scheduled"]
+	deviceToken := multipart.Value["deviceToken"]
 
 	channelRepo := mongoRepository.NewChannelRepo()
 	chID, err := uuid.Parse(channelName[0])
@@ -947,6 +958,7 @@ func scheduleVideoHandler(c *gin.Context) error {
 		Files:       []uuid.UUID{},
 		Scheduled:   parsedTime,
 		UserID: user.ID,
+		DeviceToken: deviceToken[0],
 	}
 	file := models.File{
 		ID: fileID,
