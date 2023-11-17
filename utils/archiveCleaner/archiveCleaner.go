@@ -53,12 +53,12 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 
 	var archivedPosts []models.Post
 
-	archivedPosts = *repository.GetScheduledPostRelations(start, end-start+1, true)
+	archivedPosts = *repository.GetScheduledPostRelations(context.Background(),start, end-start+1, true)
 	for _, archivedPost := range archivedPosts {
 		ago := time.Now().AddDate(0,0,-14)
 		if archivedPost.Scheduled.Before(ago) {
 			//repository.ArchivizePost(archivedPost.ID)
-			repository.DeleteScheduledPostById(archivedPost.ID)
+			repository.DeleteScheduledPostById(context.Background(),archivedPost.ID)
 		}
 	}
 

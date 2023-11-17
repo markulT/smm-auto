@@ -15,12 +15,39 @@ type ChannelRepository interface {
 	SaveNewChannel(c context.Context, ch *models.Channel) error
 	DeleteChannel(c context.Context, chID uuid.UUID) error
 	FindByID(c context.Context, chID uuid.UUID) (*models.Channel, error)
+	FindAllByUserID(c context.Context, userID uuid.UUID) (*[]models.Channel, error)
 }
 
 type channelRepoImpl struct {}
 
 func NewChannelRepo() ChannelRepository {
 	return &channelRepoImpl{}
+}
+
+func (cr *channelRepoImpl) FindAllByUserID(c context.Context, userID uuid.UUID) (*[]models.Channel, error) {
+
+	var channelsList []models.Channel
+
+	channelCollection := utils.DB.Collection("channels")
+	curs, err := channelCollection.Find(c, bson.M{"userId": userID})
+	defer curs.Close(c)
+	if err != nil {
+		return nil, err
+	}
+
+	if err:=curs.Err();err!=nil {
+		return nil, err
+	}
+
+	for curs.Next(c) {
+		var channel models.Channel
+		if err:=curs.Decode(&channel);err!=nil {
+			return nil, err
+		}
+		channelsList = append(channelsList, channel)
+	}
+
+	return &channelsList, nil
 }
 
 func (cr *channelRepoImpl) AssignBotToken(c context.Context, botToken string, chID uuid.UUID) error {

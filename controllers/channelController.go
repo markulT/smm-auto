@@ -19,10 +19,45 @@ func SetupChannelRoutes(r *gin.Engine) {
 
 	channelGroup.POST("/add", jsonHelper.MakeHttpHandler(addChannelHandler))
 	channelGroup.POST("/assignToken", jsonHelper.MakeHttpHandler(assignTokenToChannelHandler))
+	channelGroup.GET("/", jsonHelper.MakeHttpHandler(getAllChannelsHandler))
+	//channelGroup.GET("/:id", jsonHelper.MakeHttpHandler(getAllChannelsHandler))
 }
 
 type AddChannelRequest struct {
 	ChannelName string `json:"channelName"`
+}
+
+
+func getAllChannelsHandler(c *gin.Context) error {
+
+	//var channelsList []models.Channel
+
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
+
+	channelRepo := mongoRepository.NewChannelRepo()
+	channelsList, err := channelRepo.FindAllByUserID(context.Background(), user.ID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Internal server error. Error loading user's channels",
+			Status: 500,
+		}
+	}
+
+	c.JSON(200, gin.H{"channels": *channelsList})
+	return nil
 }
 
 func addChannelHandler(c *gin.Context) error {
@@ -46,8 +81,6 @@ func addChannelHandler(c *gin.Context) error {
 	}
 
 	channelRepo := mongoRepository.NewChannelRepo()
-	chID, err := uuid.NewRandom()
-	fmt.Println(chID)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    "Internal server error",
@@ -181,7 +214,7 @@ func assignTokenToChannelHandler(c *gin.Context) error {
 			Status: 500,
 		}
 	}
-
+	c.JSON(200, gin.H{})
 	return nil
 }
 

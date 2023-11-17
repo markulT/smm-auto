@@ -2,12 +2,15 @@ package controllers
 
 import (
 	"context"
+	"encoding/json"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
 	"golearn/api/telegram"
+	"golearn/models"
 	mongoRepository "golearn/repository"
 	"golearn/utils/jsonHelper"
 	"io"
+	"os"
 )
 
 func SetupBotRoutes(r *gin.Engine) {
@@ -577,6 +580,25 @@ func sendMediaGroupHandler(c *gin.Context) error {
 	caption := multipart.Value["caption"]
 	chat := multipart.Value["chat"]
 
+	fileTypesField := multipart.Value["fileTypes"]
+
+	var data []map[string]string
+
+	if err := json.Unmarshal([]byte(fileTypesField[0]), &data); err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Error processing file types",
+			Status: 0,
+		}
+	}
+
+	fileTypeMap := make(map[string]string)
+
+	for _, entry := range data {
+		for filename, fileType := range entry {
+			fileTypeMap[filename] = fileType
+		}
+	}
+
 	channelRepo := mongoRepository.NewChannelRepo()
 	chID, err := uuid.Parse(chat[0])
 	if err != nil {
@@ -603,21 +625,31 @@ func sendMediaGroupHandler(c *gin.Context) error {
 
 	var filenames []string
 	var fileList []*io.Reader
+	var fileModels []models.File
+
 	for _, file := range files {
 		of, err := file.Open()
+		defer of.Close()
 		if err != nil {
 			return jsonHelper.ApiError{
 				Err:    err.Error(),
 				Status: 500,
 			}
 		}
-		defer of.Close()
+		fileID, err := uuid.NewRandom()
+		fileModel := models.File{
+			ID:         fileID,
+			BucketName: os.Getenv("mediaGroupBucketName"),
+			Type:       fileTypeMap[file.Filename],
+			PostID:     uuid.UUID{},
+		}
 		readerPtr := io.Reader(of)
 		fileList = append(fileList, &readerPtr)
 		filenames = append(filenames, file.Filename)
+		fileModels = append(fileModels, fileModel)
 	}
 	//_, err := telegram.SendMediaGroupLazy(files, caption[0])
-	_, err = telegram.SendMediaGroup(channel.AssignedBotToken,fileList, filenames, caption[0], channel.Name)
+	_, err = telegram.SendMediaGroup(channel.AssignedBotToken,fileList, filenames,fileModels, caption[0], channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),

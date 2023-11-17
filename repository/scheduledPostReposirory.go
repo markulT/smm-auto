@@ -8,7 +8,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"golearn/models"
 	"golearn/utils"
-	"log"
 	"time"
 )
 type FlatScheduledRelations struct {
@@ -33,20 +32,19 @@ func GetScheduledPostRelations(c context.Context, offset int, limit int, archive
 	reqOptions.SetSkip(int64(offset))
 	reqOptions.SetLimit(int64(limit))
 	cur, err := postsCollection.Find(c, bson.M{"scheduled":bson.M{"$exists":true, "$ne":nil}, "archived":archived}, reqOptions)
+	defer cur.Close(c)
 	if err != nil {
-		log.Fatal(err)
 		return nil
 	}
-	defer cur.Close(c)
 	for cur.Next(c) {
 		var post models.Post
 		if err:=cur.Decode(&post);err!=nil {
-			log.Fatal(err)
+			return nil
 		}
 		posts = append(posts, post)
 	}
 	if err:=cur.Err();err!=nil {
-		log.Fatal(err)
+		return nil
 	}
 	return &posts
 }
