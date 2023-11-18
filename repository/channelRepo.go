@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -88,23 +89,26 @@ func (cr *channelRepoImpl) DeleteChannel(c context.Context, chID uuid.UUID) erro
 	channelCollection := utils.DB.Collection("channels")
 	_, err := channelCollection.DeleteOne(c, bson.M{"_id":chID})
 	if err != nil {
+		fmt.Println("error")
+		fmt.Println(err.Error())
 		return err
 	}
+	fmt.Println("success")
 	return nil
 }
 
 func (cr *channelRepoImpl) FindByID(c context.Context, chID uuid.UUID) (*models.Channel, error) {
-	var searchedChannel *models.Channel
+	var searchedChannel models.Channel
 	channelCollection := utils.DB.Collection("channels")
 	res := channelCollection.FindOne(c, bson.M{"_id":chID})
 	if res.Err() != nil {
 		return nil, res.Err()
 	}
 
-	err := res.Decode(searchedChannel)
+	err := res.Decode(&searchedChannel)
 	if err != nil {
 		return nil, err
 	}
 
-	return searchedChannel, nil
+	return &searchedChannel, nil
 }
