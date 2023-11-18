@@ -21,7 +21,6 @@ type User struct {
 	UpdatedAt        time.Time
 	Email            string
 	Password         string
-	ChannelList      []byte
 	SubscriptionID   string `bson:"subscriptionID"`
 	SubscriptionType int    `bson:"subscriptionType"`
 	Role             Role

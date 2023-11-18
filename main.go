@@ -45,6 +45,7 @@ func main() {
 	controllers.SetupScheduleRoutes(r)
 	controllers.SetupPaymentRoutes(r)
 	controllers.SetupArchiveRoutes(r)
+	controllers.SetupChannelRoutes(r)
 
 	schedulerTask := &scheduler.SchedulerTask{}
 	schedulerTask.FcmClient = firebaseMessagingClient

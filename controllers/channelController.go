@@ -39,10 +39,11 @@ func getAllChannelsHandler(c *gin.Context) error {
 			Status: 417,
 		}
 	}
+
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
 	if err != nil {
 		return jsonHelper.ApiError{
-			Err:    err.Error(),
+			Err:    "Some huynia happened",
 			Status: 417,
 		}
 	}
@@ -87,9 +88,17 @@ func addChannelHandler(c *gin.Context) error {
 			Status: 500,
 		}
 	}
+	chID, err := uuid.NewUUID()
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Error generating channel's ID, try again",
+			Status: 500,
+		}
+	}
 	channel := &models.Channel{
 		Name:             body.ChannelName,
 		UserID: user.ID,
+		ID: chID,
 	}
 
 	err = channelRepo.SaveNewChannel(context.Background(), channel)

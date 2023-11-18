@@ -1,6 +1,7 @@
 package controllers
 
 import (
+	"context"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/google/uuid"
@@ -41,7 +42,7 @@ type SetDeviceTokenRequest struct {
 
 type ProfileResponse struct {
 	Email            string `json:"email"`
-	ChannelList      []byte
+	ChannelList      []models.Channel `json:"channelList"`
 	SubscriptionID   string `json:"subscriptionID"`
 	SubscriptionType int    `json:"subscriptionType"`
 }
@@ -62,11 +63,19 @@ func getProfileHandler(c *gin.Context) error {
 			Status: 404,
 		}
 	}
+	chRepo:= mongoRepository.NewChannelRepo()
+	usersChannelList, err := chRepo.FindAllByUserID(context.Background(), user.ID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "User does not have any post",
+			Status: 404,
+		}
+	}
 	userProfile := ProfileResponse{
 		Email:            user.Email,
-		ChannelList:      user.ChannelList,
 		SubscriptionID:   user.SubscriptionID,
 		SubscriptionType: user.SubscriptionType,
+		ChannelList: *usersChannelList,
 	}
 
 	fmt.Println(user)
