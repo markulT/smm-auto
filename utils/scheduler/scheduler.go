@@ -71,15 +71,9 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 		currentTime := time.Now().In(time.FixedZone(originalTimezone, offset))
 		if scheduledPost.Scheduled.Before(currentTime) {
 
-			channelRepo := repository.NewChannelRepo()
-			channel, err := channelRepo.FindByID(context.Background(), scheduledPost.ChannelID)
-			if err != nil {
-				continue
-			}
-
 			switch scheduledPost.Type {
 			case "message":
-				telegram.SendMessage(scheduledPost.BotToken,scheduledPost.Text, channel.Name)
+				telegram.SendMessage(scheduledPost.BotToken,scheduledPost.Text, scheduledPost.ChannelName)
 				err := repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				if err != nil 	{
 					return
@@ -90,7 +84,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				if err != nil {
 					return
 				}
-				_, err = telegram.SendPhoto(scheduledPost.BotToken,image, scheduledPost.Text, scheduledPost.Files[0].String(), channel.Name)
+				_, err = telegram.SendPhoto(scheduledPost.BotToken,image, scheduledPost.Text, scheduledPost.Files[0].String(),  scheduledPost.ChannelName)
 				if err != nil {
 					return
 				}
@@ -118,7 +112,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 					files = append(files, &media)
 					fileModels = append(fileModels, *fileModel)
 				}
-				_, err := telegram.SendMediaGroup(scheduledPost.BotToken,files, filenames,fileModels, scheduledPost.Text, channel.Name)
+				_, err := telegram.SendMediaGroup(scheduledPost.BotToken,files, filenames,fileModels, scheduledPost.Text,  scheduledPost.ChannelName)
 				if err != nil {
 					return
 				}
@@ -135,7 +129,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				if err != nil {
 					return
 				}
-				_, err = telegram.SendVideoBytes(scheduledPost.BotToken,file, scheduledPost.Files[0].String(), scheduledPost.Text, channel.Name)
+				_, err = telegram.SendVideoBytes(scheduledPost.BotToken,file, scheduledPost.Files[0].String(), scheduledPost.Text, scheduledPost.ChannelName)
 				if err != nil {
 					return
 				}
@@ -146,7 +140,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				if err != nil {
 					return
 				}
-				_,err = telegram.SendAudioBytes(scheduledPost.BotToken,file, scheduledPost.Text, channel.Name, scheduledPost.Files[0].String())
+				_,err = telegram.SendAudioBytes(scheduledPost.BotToken,file, scheduledPost.Text,  scheduledPost.ChannelName, scheduledPost.Files[0].String())
 				if err != nil {
 					return
 				}
@@ -157,7 +151,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				if err != nil {
 					return
 				}
-				_,err = telegram.SendVoiceBytes(scheduledPost.BotToken,file, scheduledPost.Text, channel.Name, scheduledPost.Files[0].String())
+				_,err = telegram.SendVoiceBytes(scheduledPost.BotToken,file, scheduledPost.Text,  scheduledPost.ChannelName, scheduledPost.Files[0].String())
 				if err != nil {
 					return
 				}
