@@ -1,0 +1,1999 @@
+{
+    "swagger": "2.0",
+    "info": {
+        "description": "API server for SMM-auto application",
+        "title": "SMM-Auto API",
+        "contact": {},
+        "version": "1.0"
+    },
+    "host": "localhost:8000",
+    "basePath": "/",
+    "paths": {
+        "/archive/": {
+            "get": {
+                "description": "Get user's profile data",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Get profile handler",
+                "operationId": "getProfile",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ProfileResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/login": {
+            "post": {
+                "description": "Login with email\u0026password. Returns jwt tokens that should be saved in application. the jwt token should be pinned to each request with header (Example - \"Authorization\": Bearer jwtToken). If the given token is invalid - 401 status error always gets thrown",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Login",
+                "operationId": "Login",
+                "parameters": [
+                    {
+                        "description": "account email",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.LoginRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.AuthResponse"
+                        }
+                    },
+                    "403": {
+                        "description": "Wrong email/password",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "404": {
+                        "description": "Wrong email/password",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/refresh": {
+            "post": {
+                "description": "Refresh jwt token",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Refresh",
+                "operationId": "Refresh",
+                "parameters": [
+                    {
+                        "description": "Account info",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.RefreshRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user from token",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/auth/signup": {
+            "post": {
+                "description": "Signup",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "auth"
+                ],
+                "summary": "Signup",
+                "operationId": "Signup",
+                "parameters": [
+                    {
+                        "description": "Account info",
+                        "name": "body",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.LoginRequestBody"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.AuthResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "User with such email already exists",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error (might be issue with stripe)",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/bot/sendAudio": {
+            "post": {
+                "description": "Send text message to some channel",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bot"
+                ],
+                "summary": "Send audio",
+                "operationId": "SendAudio",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Text of post",
+                        "name": "caption",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token of bot that manages given channels",
+                        "name": "botToken",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel ID",
+                        "name": "channelName",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Audio message file",
+                        "name": "audio",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/bot/sendLocation": {
+            "post": {
+                "description": "Send location message to some channel",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bot"
+                ],
+                "summary": "Send location",
+                "operationId": "SendLocation",
+                "parameters": [
+                    {
+                        "description": "Location body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SendLocationRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/bot/sendMessage": {
+            "post": {
+                "description": "Send text message to some channel",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bot"
+                ],
+                "summary": "Send message",
+                "operationId": "SendMessage",
+                "parameters": [
+                    {
+                        "description": "Message body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SendMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "404": {
+                        "description": "Channel with given ID does not exist",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/bot/sendPhoto": {
+            "post": {
+                "description": "Send mediagroup message to some channel",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bot"
+                ],
+                "summary": "Send media",
+                "operationId": "SendMediaGroup",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Text of post",
+                        "name": "caption",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Media message file (max of 10 files are allowed)",
+                        "name": "media",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "ID of channel",
+                        "name": "chat",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Stringified map of each file type (Example: \\",
+                        "name": "fileTypes",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/bot/sendVenue": {
+            "post": {
+                "description": "Send venue",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bot"
+                ],
+                "summary": "Send venue",
+                "operationId": "SendVenue",
+                "parameters": [
+                    {
+                        "description": "Venue request body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.SendVenueRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/bot/sendVideo": {
+            "post": {
+                "description": "Send video message to some channel",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bot"
+                ],
+                "summary": "Send video",
+                "operationId": "SendVideo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Text of post",
+                        "name": "caption",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Voice message file",
+                        "name": "video",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel ID",
+                        "name": "channelName",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token of bot that manages given channels",
+                        "name": "botToken",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/bot/sendVideoNote": {
+            "post": {
+                "description": "Send video message to some channel",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bot"
+                ],
+                "summary": "Send video",
+                "operationId": "SendVideoNote",
+                "parameters": [
+                    {
+                        "type": "file",
+                        "description": "Voice message file",
+                        "name": "videoNote",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel ID",
+                        "name": "channelName",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/bot/sendVoice": {
+            "post": {
+                "description": "Send voice message to some channel",
+                "consumes": [
+                    "multipart/form-data"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "bot"
+                ],
+                "summary": "Send voice",
+                "operationId": "SendVoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Text of post",
+                        "name": "caption",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Voice message file",
+                        "name": "voice",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel ID",
+                        "name": "channelName",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Token of bot that manages given channels",
+                        "name": "botToken",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/channel/": {
+            "get": {
+                "description": "Returns an array of Channel objects",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channel"
+                ],
+                "summary": "Get all channels",
+                "operationId": "GetAllChannels",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.GetAllChannelsResponse"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/channel/add": {
+            "post": {
+                "description": "Remove channel from user's list",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "channel"
+                ],
+                "summary": "Delete channel",
+                "operationId": "DeleteChannel",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "channel ID",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "403": {
+                        "description": "User does not have access to this channel",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/paymentMethod/add": {
+            "post": {
+                "description": "Add payment method (card)",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Add payment method",
+                "operationId": "AddPaymentMethod",
+                "parameters": [
+                    {
+                        "description": "Card data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.AddPaymentMethodRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Returns array of subscription plans (subscription type can be checked here : https://stripe.com/docs/api/plans)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/plans": {
+            "get": {
+                "description": "Get all available subscription plans",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Get subscription plans",
+                "operationId": "GetSubPlans",
+                "responses": {
+                    "200": {
+                        "description": "Returns array of subscription plans (subscription type can be checked here : https://stripe.com/docs/api/plans)",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/payments/subscription": {
+            "post": {
+                "description": "Create subscription",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "payments"
+                ],
+                "summary": "Create subscription",
+                "operationId": "CreateSub",
+                "parameters": [
+                    {
+                        "description": "Card data",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.CreateSubscriptionRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/": {
+            "get": {
+                "description": "Receive all scheduled posts",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Get all scheduled posts",
+                "operationId": "GetScheduledPosts",
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "$ref": "#/definitions/controllers.GetScheduledPostHandler"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal server error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/audio": {
+            "post": {
+                "description": "Schedule message",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Schedule message",
+                "operationId": "ScheduleMessage",
+                "parameters": [
+                    {
+                        "description": "Request body",
+                        "name": "request",
+                        "in": "body",
+                        "required": true,
+                        "schema": {
+                            "$ref": "#/definitions/controllers.ScheduleMessageRequest"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/date/{scheduled}": {
+            "get": {
+                "description": "Receive posts by date",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Get posts by date",
+                "operationId": "GetPostsByDate",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Date",
+                        "name": "scheduled",
+                        "in": "query",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/delete/{id}": {
+            "delete": {
+                "description": "Delete post by id",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Delete post by id",
+                "operationId": "DeletePost",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID of post to delete",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Inernal server error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/image/{imageName}": {
+            "post": {
+                "description": "Receive post's image banner",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Get post's image",
+                "operationId": "GetPostsImage",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the image",
+                        "name": "imageName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/mediaGroup": {
+            "post": {
+                "description": "Schedule mediagroup",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Schedule mediagroup",
+                "operationId": "ScheduleMediaGroup",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Text of post",
+                        "name": "caption",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Media message file",
+                        "name": "media",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel name",
+                        "name": "channelName",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Title of post (in-app only, won't affect telegram)",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel name",
+                        "name": "scheduled",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Device token (required for notification sending)",
+                        "name": "deviceToken",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bot token",
+                        "name": "botToken",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/photo": {
+            "post": {
+                "description": "Schedule photo",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Schedule photo",
+                "operationId": "SchedulePhoto",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Text of post",
+                        "name": "caption",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "photo message file",
+                        "name": "photo",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel name",
+                        "name": "channelName",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Title of post (in-app only, won't affect telegram)",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Scheduled date",
+                        "name": "scheduled",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Device token (required for notification sending)",
+                        "name": "deviceToken",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bot token",
+                        "name": "botToken",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/video": {
+            "post": {
+                "description": "Schedule video",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Schedule video",
+                "operationId": "ScheduleVideo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Text of post",
+                        "name": "caption",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Video message file",
+                        "name": "video",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel name",
+                        "name": "channelName",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Title of post (in-app only, won't affect telegram)",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Scheduled date",
+                        "name": "scheduled",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Device token (required for notification sending)",
+                        "name": "deviceToken",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bot token",
+                        "name": "botToken",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/video/{videoName}": {
+            "get": {
+                "description": "Receive post's video banner",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/octet-stream"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Get posts videos",
+                "operationId": "GetPostsVideo",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Name of the image",
+                        "name": "videoName",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/voice": {
+            "post": {
+                "description": "Receive all scheduled posts",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Schedule voice",
+                "operationId": "ScheduleVoice",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "Text of post",
+                        "name": "caption",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "file",
+                        "description": "Voice message file",
+                        "name": "audio",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Channel name",
+                        "name": "channelName",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Title of post (in-app only, won't affect telegram)",
+                        "name": "title",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Scheduled date",
+                        "name": "scheduled",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Device token (required for notification sending)",
+                        "name": "deviceToken",
+                        "in": "formData",
+                        "required": true
+                    },
+                    {
+                        "type": "string",
+                        "description": "Bot token",
+                        "name": "botToken",
+                        "in": "formData",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        },
+        "/schedule/{id}": {
+            "get": {
+                "description": "Receive post's image banner",
+                "consumes": [
+                    "application/json"
+                ],
+                "produces": [
+                    "application/json"
+                ],
+                "tags": [
+                    "posts"
+                ],
+                "summary": "Receive post by id",
+                "operationId": "GetPost",
+                "parameters": [
+                    {
+                        "type": "string",
+                        "description": "ID of post to receive",
+                        "name": "id",
+                        "in": "path",
+                        "required": true
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "OK",
+                        "schema": {
+                            "type": "string"
+                        }
+                    },
+                    "400": {
+                        "description": "Bad Request",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "417": {
+                        "description": "Error identifying user",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "500": {
+                        "description": "Internal Server Error",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    },
+                    "default": {
+                        "description": "",
+                        "schema": {
+                            "$ref": "#/definitions/jsonHelper.ApiError"
+                        }
+                    }
+                }
+            }
+        }
+    },
+    "definitions": {
+        "controllers.AddPaymentMethodRequest": {
+            "type": "object",
+            "properties": {
+                "cardNumber": {
+                    "type": "string"
+                },
+                "cvc": {
+                    "type": "string"
+                },
+                "expMonth": {
+                    "type": "integer"
+                },
+                "expYear": {
+                    "type": "integer"
+                }
+            }
+        },
+        "controllers.ArchivedPosts": {
+            "type": "object",
+            "properties": {
+                "posts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Post"
+                    }
+                }
+            }
+        },
+        "controllers.AuthResponse": {
+            "type": "object",
+            "properties": {
+                "accessToken": {
+                    "type": "string"
+                },
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.CreateSubscriptionRequest": {
+            "type": "object",
+            "properties": {
+                "subscriptionType": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.GetAllChannelsResponse": {
+            "type": "object",
+            "properties": {
+                "channels": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Channel"
+                    }
+                }
+            }
+        },
+        "controllers.GetScheduledPostHandler": {
+            "type": "object",
+            "properties": {
+                "posts": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Post"
+                    }
+                }
+            }
+        },
+        "controllers.LoginRequestBody": {
+            "type": "object",
+            "properties": {
+                "email": {
+                    "type": "string"
+                },
+                "password": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.ProfileResponse": {
+            "type": "object",
+            "properties": {
+                "channelList": {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/models.Channel"
+                    }
+                },
+                "email": {
+                    "type": "string"
+                },
+                "subscriptionID": {
+                    "type": "string"
+                },
+                "subscriptionType": {
+                    "type": "integer"
+                }
+            }
+        },
+        "controllers.RefreshRequest": {
+            "type": "object",
+            "properties": {
+                "refreshToken": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.ScheduleMessageRequest": {
+            "type": "object",
+            "properties": {
+                "botToken": {
+                    "type": "string"
+                },
+                "chat": {
+                    "type": "string"
+                },
+                "deviceToken": {
+                    "type": "string"
+                },
+                "scheduled": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.SendLocationRequest": {
+            "type": "object",
+            "properties": {
+                "botToken": {
+                    "type": "string"
+                },
+                "channelName": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "string"
+                },
+                "longitude": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.SendMessageRequest": {
+            "type": "object",
+            "properties": {
+                "botToken": {
+                    "type": "string"
+                },
+                "channelName": {
+                    "type": "string"
+                },
+                "text": {
+                    "type": "string"
+                }
+            }
+        },
+        "controllers.SendVenueRequest": {
+            "type": "object",
+            "properties": {
+                "address": {
+                    "type": "string"
+                },
+                "botToken": {
+                    "type": "string"
+                },
+                "channelName": {
+                    "type": "string"
+                },
+                "latitude": {
+                    "type": "string"
+                },
+                "longitude": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                }
+            }
+        },
+        "jsonHelper.ApiError": {
+            "type": "object",
+            "properties": {
+                "error": {
+                    "type": "string"
+                },
+                "status": {
+                    "type": "integer"
+                }
+            }
+        },
+        "models.Channel": {
+            "type": "object",
+            "properties": {
+                "assignedBotToken": {
+                    "type": "string"
+                },
+                "id": {
+                    "type": "string"
+                },
+                "name": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        },
+        "models.Post": {
+            "type": "object",
+            "properties": {
+                "archived": {
+                    "type": "boolean"
+                },
+                "botToken": {
+                    "type": "string"
+                },
+                "chat": {
+                    "type": "string"
+                },
+                "content": {
+                    "type": "string"
+                },
+                "deviceToken": {
+                    "type": "string"
+                },
+                "files": {
+                    "type": "array",
+                    "items": {
+                        "type": "string"
+                    }
+                },
+                "id": {
+                    "type": "string"
+                },
+                "scheduled": {
+                    "type": "string"
+                },
+                "title": {
+                    "type": "string"
+                },
+                "type": {
+                    "type": "string"
+                },
+                "userId": {
+                    "type": "string"
+                }
+            }
+        }
+    },
+    "securityDefinitions": {
+        "ApiKeyAuth": {
+            "type": "apiKey",
+            "name": "Authorization",
+            "in": "header"
+        }
+    }
+}

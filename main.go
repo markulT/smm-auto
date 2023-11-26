@@ -3,12 +3,18 @@ package main
 import (
 	"context"
 	"github.com/gin-gonic/gin"
+	_ "github.com/swaggo/files"
+	swaggerFiles "github.com/swaggo/files"
+	_ "github.com/swaggo/gin-swagger"
+	ginSwagger "github.com/swaggo/gin-swagger"
 	"golearn/controllers"
+	_ "golearn/docs"
 	"golearn/utils"
 	"golearn/utils/archiveCleaner"
 	"golearn/utils/s3"
 	"golearn/utils/scheduler"
 )
+
 
 func init() {
 	utils.LoadEnvVariables()
@@ -52,6 +58,8 @@ func main() {
 
 	go schedulerTask.FetchAndProcessPosts()
 	go archiveCleaner.RunArchiveCleaner()
+
+	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 
 	r.Run()
 }

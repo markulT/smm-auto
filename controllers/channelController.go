@@ -27,7 +27,22 @@ type AddChannelRequest struct {
 	ChannelName string `json:"channelName"`
 }
 
+type GetAllChannelsResponse struct {
+	Channels []models.Channel `json:"channels"`
+}
 
+// @Summary Get all channels
+// @Tags channel
+// @Description Returns an array of Channel objects
+// @ID GetAllChannels
+// @Accept json
+// @Produce json
+// @Success 200 {object} GetAllChannelsResponse
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 500 {object} jsonHelper.ApiError "Internal server error"
+// @Failure default {object} jsonHelper.ApiError
+// @Router /channel/ [get]
 func getAllChannelsHandler(c *gin.Context) error {
 
 	//var channelsList []models.Channel
@@ -61,6 +76,19 @@ func getAllChannelsHandler(c *gin.Context) error {
 	return nil
 }
 
+
+// @Summary Add channel
+// @Tags channel
+// @Description Adds channel to user's channelList
+// @ID AddChannel
+// @Accept json
+// @Produce json
+// @Success 200 {string} a
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 500 {object} jsonHelper.ApiError
+// @Failure default {object} jsonHelper.ApiError
+// @Router /channel/add [post]
 func addChannelHandler(c *gin.Context) error {
 
 	var body AddChannelRequest
@@ -112,6 +140,20 @@ func addChannelHandler(c *gin.Context) error {
 	return nil
 }
 
+// @Summary Delete channel
+// @Tags channel
+// @Description Remove channel from user's list
+// @ID DeleteChannel
+// @Accept json
+// @Produce json
+// @Param id path string true "channel ID"
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 403 {object} jsonHelper.ApiError "User does not have access to this channel"
+// @Failure 500 {object} jsonHelper.ApiError "Internal server error"
+// @Failure default {object} jsonHelper.ApiError
+// @Router /channel/add [post]
 func deleteChannelHandler(c *gin.Context) error {
 
 	channelIDParam := c.Param("id")

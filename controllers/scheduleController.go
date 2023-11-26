@@ -190,9 +190,10 @@ func getPostImage(c *gin.Context) error {
 // @Accept json
 // @Produce json
 // @Param id path string true "ID of post to delete"
-// @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
-// @Failure 500 {object} jsonHelper.ApiError
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 500 {object} jsonHelper.ApiError "Inernal server error"
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/delete/{id} [delete]
 func deletePostHandler(c *gin.Context) error {
@@ -246,7 +247,8 @@ func deletePostHandler(c *gin.Context) error {
 // @Produce json
 // @Param id path string true "ID of post to receive"
 // @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 400 {object} jsonHelper.ApiError
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/{id} [get]
@@ -292,15 +294,20 @@ func getPostHandler(c *gin.Context) error {
 	return nil
 }
 
+type GetScheduledPostHandler struct {
+	Posts []models.Post `json:"posts"`
+}
+
 // @Summary Get all scheduled posts
 // @Tags posts
 // @Description Receive all scheduled posts
 // @ID GetScheduledPosts
 // @Accept json
 // @Produce json
-// @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
-// @Failure 500 {object} jsonHelper.ApiError
+// @Success 200 {object} GetScheduledPostHandler
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 500 {object} jsonHelper.ApiError "Internal server error"
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/ [get]
 func getScheduledPostHandler(c *gin.Context) error {
@@ -346,13 +353,16 @@ func getScheduledPostHandler(c *gin.Context) error {
 // @ID ScheduleVoice
 // @Accept json
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param audio body file true "Voice message file"
-// @Param channelName body string true "Channel name"
-// @Param title body string true "Title of post (in-app only, won't affect telegram)"
-// @Param scheduled body string true "Scheduled date"
+// @Param caption formData string true "Text of post"
+// @Param audio formData file true "Voice message file"
+// @Param channelName formData string true "Channel name"
+// @Param title formData string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled formData string true "Scheduled date"
+// @Param deviceToken formData string true "Device token (required for notification sending)"
+// @Param botToken formData string true "Bot token"
 // @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/voice [post]
@@ -434,13 +444,16 @@ func scheduleVoiceHandler(c *gin.Context) error {
 // @ID ScheduleAudio
 // @Accept json
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param audio body file true "Audio message file"
-// @Param channelName body string true "Channel name"
-// @Param title body string true "Title of post (in-app only, won't affect telegram)"
-// @Param scheduled body string true "Scheduled date"
-// @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Param caption formData string true "Text of post"
+// @Param audio formData file true "Audio message file"
+// @Param channelName formData string true "Channel name"
+// @Param title formData string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled formData string true "Scheduled date"
+// @Param deviceToken formData string true "Device token (required for notification sending)"
+// @Param botToken formData string true "Bot token"
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} jsonHelper.ApiError
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/audio [post]
@@ -558,8 +571,9 @@ type ScheduleMessageRequest struct {
 // @Accept json
 // @Produce json
 // @Param request body controllers.ScheduleMessageRequest true "Request body"
-// @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/audio [post]
@@ -614,6 +628,7 @@ func scheduleMessageHandler(c *gin.Context) error {
 		Scheduled:   parsedTime,
 		DeviceToken: body.DeviceToken,
 		BotToken: body.BotToken,
+		Archived: false,
 	}
 	err = postRepo.SavePostWithId(&post, postId)
 	if err != nil {
@@ -632,13 +647,16 @@ func scheduleMessageHandler(c *gin.Context) error {
 // @ID SchedulePhoto
 // @Accept json
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param photo body file true "photo message file"
-// @Param channelName body string true "Channel name"
-// @Param title body string true "Title of post (in-app only, won't affect telegram)"
-// @Param scheduled body string true "Scheduled date"
-// @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Param caption formData string true "Text of post"
+// @Param photo formData file true "photo message file"
+// @Param channelName formData string true "Channel name"
+// @Param title formData string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled formData string true "Scheduled date"
+// @Param deviceToken formData string true "Device token (required for notification sending)"
+// @Param botToken formData string true "Bot token"
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/photo [post]
@@ -672,6 +690,7 @@ func schedulePhotoHandler(c *gin.Context) error {
 	}
 
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
+	fmt.Println(parsedTime.Zone())
 	file, err := files[0].Open()
 	defer file.Close()
 	if err != nil {
@@ -747,13 +766,16 @@ func schedulePhotoHandler(c *gin.Context) error {
 // @ID ScheduleMediaGroup
 // @Accept json
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param media body file true "Media message file"
-// @Param channelName body string true "Channel name"
-// @Param title body string true "Title of post (in-app only, won't affect telegram)"
-// @Param scheduled body string true "Channel name"
-// @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Param caption formData string true "Text of post"
+// @Param media formData file true "Media message file"
+// @Param channelName formData string true "Channel name"
+// @Param title formData string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled formData string true "Channel name"
+// @Param deviceToken formData string true "Device token (required for notification sending)"
+// @Param botToken formData string true "Bot token"
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/mediaGroup [post]
@@ -899,13 +921,16 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 // @ID ScheduleVideo
 // @Accept json
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param video body file true "Video message file"
-// @Param channelName body string true "Channel name"
-// @Param title body string true "Title of post (in-app only, won't affect telegram)"
-// @Param scheduled body string true "Scheduled date"
-// @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Param caption formData string true "Text of post"
+// @Param video formData file true "Video message file"
+// @Param channelName formData string true "Channel name"
+// @Param title formData string true "Title of post (in-app only, won't affect telegram)"
+// @Param scheduled formData string true "Scheduled date"
+// @Param deviceToken formData string true "Device token (required for notification sending)"
+// @Param botToken formData string true "Bot token"
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/video [post]

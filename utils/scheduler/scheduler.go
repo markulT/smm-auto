@@ -3,6 +3,7 @@ package scheduler
 import (
 	"context"
 	"firebase.google.com/go/messaging"
+	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"golearn/api/telegram"
 	"golearn/models"
@@ -63,11 +64,12 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 	var scheduledPosts []models.Post
 
 	notificationService := notifications.DefaultNotificationService{}
+	notificationService.FcmClient = s.FcmClient
 
 	scheduledPosts = *repository.GetScheduledPostRelations(context.Background(),start, end-start+1, false)
-
 	for _, scheduledPost := range scheduledPosts {
 		originalTimezone, offset := scheduledPost.Scheduled.Zone()
+
 		currentTime := time.Now().In(time.FixedZone(originalTimezone, offset))
 		if scheduledPost.Scheduled.Before(currentTime) {
 
@@ -75,28 +77,32 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 			case "message":
 				telegram.SendMessage(scheduledPost.BotToken,scheduledPost.Text, scheduledPost.ChannelName)
 				err := repository.ArchivizePost(context.Background(),scheduledPost.ID)
-				if err != nil 	{
+				if err != nil {
 					return
 				}
 				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 			case "photo":
 				image, err := s3.GetImage(scheduledPost.Files[0].String())
 				if err != nil {
-					return
+					continue
 				}
 				_, err = telegram.SendPhoto(scheduledPost.BotToken,image, scheduledPost.Text, scheduledPost.Files[0].String(),  scheduledPost.ChannelName)
 				if err != nil {
-					return
+					continue
 				}
 				err = s3.DeleteImage(scheduledPost.Files[0].String())
 				if err != nil {
-					return
+					continue
 				}
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				if err != nil {
-					return
+					continue
 				}
-				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+				err = notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+				if err != nil {
+					fmt.Println(err.Error())
+					continue
+				}
 			case "mediaGroup":
 				fileRepo := repository.NewFileRepo()
 				var files []*io.Reader

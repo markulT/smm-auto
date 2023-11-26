@@ -12,11 +12,26 @@ import (
 func SetupArchiveRoutes(r *gin.Engine) {
 	archiveGroup := r.Group("/archive")
 
-	archiveGroup.GET("/", jsonHelper.MakeHttpHandler(GetAllArchivedPosts))
+	archiveGroup.GET("/", jsonHelper.MakeHttpHandler(getAllArchivedPosts))
 
 }
 
-func GetAllArchivedPosts(c *gin.Context) error {
+type ArchivedPosts struct {
+	Posts []models.Post `json:"posts"`
+}
+
+// @Summary Get all archived posts
+// @Tags archive
+// @Description Get all archived posts
+// @ID GetAllArchivedPosts
+// @Accept json
+// @Produce json
+// @Success 200 {object} ArchivedPosts
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 500 {object} jsonHelper.ApiError "Internal server error"
+// @Failure default {object} jsonHelper.ApiError
+// @Router /archive/ [get]
+func getAllArchivedPosts(c *gin.Context) error {
 	var posts []models.Post
 	postsRepo := mongoRepository.NewPostRepository()
 	authUserEmail, exists := c.Get("userEmail")

@@ -36,6 +36,7 @@ func SetupBotRoutes(r *gin.Engine) {
 type SendMessageRequest struct {
 	Text        string `json:"text"`
 	ChannelName string `json:"channelName"`
+	BotToken string `json:"botToken"`
 }
 
 // @Summary Send message
@@ -46,6 +47,9 @@ type SendMessageRequest struct {
 // @Produce json
 // @Param request body controllers.SendMessageRequest true "Message body"
 // @Success 200 {string} a
+// @Failure 404 {object} jsonHelper.ApiError "Channel with given ID does not exist"
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /bot/sendMessage [post]
@@ -76,14 +80,7 @@ func sendMessageHandler(c *gin.Context) error {
 		}
 	}
 
-	if channel.AssignedBotToken == "" {
-		return jsonHelper.ApiError{
-			Err:    "Channel has no assigned bot token",
-			Status: 404,
-		}
-	}
-
-	err = telegram.SendMessage(channel.AssignedBotToken,body.Text, channel.Name)
+	err = telegram.SendMessage(body.BotToken,body.Text, channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -101,10 +98,11 @@ func sendMessageHandler(c *gin.Context) error {
 // @ID SendAudio
 // @Accept mpfd
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param channelName body string true "Channel name"
-// @Param audio body file true "Audio message file"
-// @Success 200 {string} a
+// @Param caption formData string true "Text of post"
+// @Param botToken formData string true "Token of bot that manages given channels"
+// @Param channelName formData string true "Channel ID"
+// @Param audio formData file true "Audio message file"
+// @Success 200 {string} string "OK"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /bot/sendAudio [post]
@@ -113,6 +111,7 @@ func sendAudioHandler(c *gin.Context) error {
 	files := multipart.File["audio"]
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
+	botToken := multipart.Value["botToken"]
 
 	channelRepo := mongoRepository.NewChannelRepo()
 	chID, err := uuid.Parse(channelName[0])
@@ -131,15 +130,9 @@ func sendAudioHandler(c *gin.Context) error {
 		}
 	}
 
-	if channel.AssignedBotToken == "" {
-		return jsonHelper.ApiError{
-			Err:    "Channel has no assigned bot token",
-			Status: 404,
-		}
-	}
 
 	for _, file := range files {
-		_, err := telegram.SendAudio(channel.AssignedBotToken,file, caption[0], channel.Name)
+		_, err := telegram.SendAudio(botToken[0],file, caption[0], channel.Name)
 		if err != nil {
 			return jsonHelper.ApiError{
 				Err:    err.Error(),
@@ -157,10 +150,11 @@ func sendAudioHandler(c *gin.Context) error {
 // @ID SendVoice
 // @Accept mpfd
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param voice body file true "Voice message file"
-// @Param channelName body string true "Channel name"
-// @Success 200 {string} a
+// @Param caption formData string true "Text of post"
+// @Param voice formData file true "Voice message file"
+// @Param channelName formData string true "Channel ID"
+// @Param botToken formData string true "Token of bot that manages given channels"
+// @Success 200 {string} string "OK"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /bot/sendVoice [post]
@@ -169,6 +163,7 @@ func sendVoiceHandler(c *gin.Context) error {
 	files := multipart.File["voice"]
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
+	botToken := multipart.Value["botToken"]
 
 	channelRepo := mongoRepository.NewChannelRepo()
 	chID, err := uuid.Parse(channelName[0])
@@ -187,15 +182,8 @@ func sendVoiceHandler(c *gin.Context) error {
 		}
 	}
 
-	if channel.AssignedBotToken == "" {
-		return jsonHelper.ApiError{
-			Err:    "Channel has no assigned bot token",
-			Status: 404,
-		}
-	}
-
 	for _, file := range files {
-		_, err := telegram.SendVoice(channel.AssignedBotToken,file, caption[0], channel.Name)
+		_, err := telegram.SendVoice(botToken[0],file, caption[0], channel.Name)
 		if err != nil {
 			return jsonHelper.ApiError{
 				Err:    err.Error(),
@@ -213,10 +201,11 @@ func sendVoiceHandler(c *gin.Context) error {
 // @ID SendVideo
 // @Accept mpfd
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param video body file true "Voice message file"
-// @Param channelName body string true "Channel name"
-// @Success 200 {string} a
+// @Param caption formData string true "Text of post"
+// @Param video formData file true "Voice message file"
+// @Param channelName formData string true "Channel ID"
+// @Param botToken formData string true "Token of bot that manages given channels"
+// @Success 200 {string} string "OK"
 // @Failure 400 {object} jsonHelper.ApiError
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
@@ -226,6 +215,7 @@ func sendVideoHandler(c *gin.Context) error {
 	files := multipart.File["video"]
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
+	botToken := multipart.Value["botToken"]
 
 	channelRepo := mongoRepository.NewChannelRepo()
 	chID, err := uuid.Parse(channelName[0])
@@ -243,14 +233,6 @@ func sendVideoHandler(c *gin.Context) error {
 			Status: 404,
 		}
 	}
-
-	if channel.AssignedBotToken == "" {
-		return jsonHelper.ApiError{
-			Err:    "Channel has no assigned bot token",
-			Status: 404,
-		}
-	}
-
 	of, err := files[0].Open()
 	if err != nil {
 		return jsonHelper.ApiError{
@@ -259,7 +241,7 @@ func sendVideoHandler(c *gin.Context) error {
 		}
 	}
 	reader := io.Reader(of)
-	_, err = telegram.SendVideoBytes(channel.AssignedBotToken,reader, files[0].Filename, caption[0], channel.Name)
+	_, err = telegram.SendVideoBytes(botToken[0],reader, files[0].Filename, caption[0], channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -276,12 +258,12 @@ func sendVideoHandler(c *gin.Context) error {
 // @Summary Send video
 // @Tags bot
 // @Description Send video message to some channel
-// @ID SendVideo
+// @ID SendVideoNote
 // @Accept mpfd
 // @Produce json
-// @Param videoNote body file true "Voice message file"
-// @Param channelName body string true "Channel name"
-// @Success 200 {string} a
+// @Param videoNote formData file true "Voice message file"
+// @Param channelName formData string true "Channel ID"
+// @Success 200 {string} string "OK"
 // @Failure 400 {object} jsonHelper.ApiError
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
@@ -290,6 +272,7 @@ func sendVideoNoteHandler(c *gin.Context) error {
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["videoNote"]
 	channelName := multipart.Value["channelName"]
+	botToken := multipart.Value["botToken"]
 
 	channelRepo := mongoRepository.NewChannelRepo()
 	chID, err := uuid.Parse(channelName[0])
@@ -308,15 +291,8 @@ func sendVideoNoteHandler(c *gin.Context) error {
 		}
 	}
 
-	if channel.AssignedBotToken == "" {
-		return jsonHelper.ApiError{
-			Err:    "Channel has no assigned bot token",
-			Status: 404,
-		}
-	}
-
 	for _, file := range files {
-		_, err := telegram.SendVideoNote(channel.AssignedBotToken,file, channel.Name)
+		_, err := telegram.SendVideoNote(botToken[0],file, channel.Name)
 		if err != nil {
 			return jsonHelper.ApiError{
 				Err:    err.Error(),
@@ -364,6 +340,7 @@ type SendLocationRequest struct {
 	Latitude  string `json:"latitude"`
 	Longitude string `json:"longitude"`
 	ChatId    string `json:"channelName"`
+	BotToken string `json:"botToken"`
 }
 
 // @Summary Send location
@@ -373,7 +350,7 @@ type SendLocationRequest struct {
 // @Accept mpfd
 // @Produce json
 // @Param request body controllers.SendLocationRequest true "Location body"
-// @Success 200 {string} a
+// @Success 200 {string} string "OK"
 // @Failure 400 {object} jsonHelper.ApiError
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
@@ -405,14 +382,9 @@ func sendLocationHandler(c *gin.Context) error {
 		}
 	}
 
-	if channel.AssignedBotToken == "" {
-		return jsonHelper.ApiError{
-			Err:    "Channel has no assigned bot token",
-			Status: 404,
-		}
-	}
 
-	err = telegram.SendLocation(channel.AssignedBotToken,body.Latitude, body.Longitude, channel.Name)
+
+	err = telegram.SendLocation(body.BotToken,body.Latitude, body.Longitude, channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -432,16 +404,17 @@ type SendVenueRequest struct {
 	Title     string `json:"title"`
 	Address   string `json:"address"`
 	ChatId    string `json:"channelName"`
+	BotToken string `json:"botToken"`
 }
 
 // @Summary Send venue
 // @Tags bot
 // @Description Send venue
-// @ID SendLocation
+// @ID SendVenue
 // @Accept mpfd
 // @Produce json
 // @Param request body controllers.SendVenueRequest true "Venue request body"`
-// @Success 200 {string} a
+// @Success 200 {string} string "OK"
 // @Failure 400 {object} jsonHelper.ApiError
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
@@ -473,14 +446,8 @@ func sendVenueHandler(c *gin.Context) error {
 		}
 	}
 
-	if channel.AssignedBotToken == "" {
-		return jsonHelper.ApiError{
-			Err:    "Channel has no assigned bot token",
-			Status: 404,
-		}
-	}
 
-	err = telegram.SendVenue(channel.AssignedBotToken,body.Latitude, body.Longitude, body.Title, body.Address, channel.Name)
+	err = telegram.SendVenue(body.BotToken,body.Latitude, body.Longitude, body.Title, body.Address, channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -489,7 +456,7 @@ func sendVenueHandler(c *gin.Context) error {
 	}
 
 	c.JSON(200, gin.H{
-		"statusCode": "success",
+		"status": "success",
 	})
 	return nil
 }
@@ -501,11 +468,12 @@ func sendVenueHandler(c *gin.Context) error {
 // @ID SendPhoto
 // @Accept mpfd
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param photo body file true "Photo message file"
-// @Param channelName body string true "Channel name"
-// @Success 200 {string} a
+// @Param caption formData string true "Text of post"
+// @Param photo formData file true "Photo message file"
+// @Param channelName formData string true "Channel ID"
+// @Success 200 {string} string "OK"
 // @Failure 400 {object} jsonHelper.ApiError
+// @Failure 404 {object} jsonHelper.ApiError "Channel with specified ID does not exist"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /bot/sendPhoto [post]
@@ -514,6 +482,7 @@ func sendPhotoHandler(c *gin.Context) error {
 	files := multipart.File["photo"]
 	caption := multipart.Value["caption"]
 	channelName := multipart.Value["channelName"]
+	botToken := multipart.Value["botToken"]
 
 	channelRepo := mongoRepository.NewChannelRepo()
 	chID, err := uuid.Parse(channelName[0])
@@ -532,13 +501,6 @@ func sendPhotoHandler(c *gin.Context) error {
 		}
 	}
 
-	if channel.AssignedBotToken == "" {
-		return jsonHelper.ApiError{
-			Err:    "Channel has no assigned bot token",
-			Status: 404,
-		}
-	}
-
 	for _, file := range files {
 		of, err := file.Open()
 		if err != nil {
@@ -548,7 +510,7 @@ func sendPhotoHandler(c *gin.Context) error {
 			}
 		}
 		defer of.Close()
-		_, err = telegram.SendPhoto(channel.AssignedBotToken,of, caption[0], file.Filename, channel.Name)
+		_, err = telegram.SendPhoto(botToken[0],of, caption[0], file.Filename, channel.Name)
 		if err != nil {
 			return jsonHelper.ApiError{
 				Err:    err.Error(),
@@ -566,9 +528,10 @@ func sendPhotoHandler(c *gin.Context) error {
 // @ID SendMediaGroup
 // @Accept mpfd
 // @Produce json
-// @Param caption body string true "Text of post"
-// @Param media body file true "Media message file"
-// @Param channelName body string true "Channel name"
+// @Param caption formData string true "Text of post"
+// @Param media formData file true "Media message file (max of 10 files are allowed)"
+// @Param chat formData string true "ID of channel"
+// @Param fileTypes formData string true "Stringified map of each file type (Example: \"[{\"fileName1\":\"video\"},{\"fileName2\":\"photo\"}]\")"
 // @Success 200 {string} a
 // @Failure 400 {object} jsonHelper.ApiError
 // @Failure 500 {object} jsonHelper.ApiError
@@ -579,6 +542,7 @@ func sendMediaGroupHandler(c *gin.Context) error {
 	files := multipart.File["media"]
 	caption := multipart.Value["caption"]
 	chat := multipart.Value["chat"]
+	botToken := multipart.Value["botToken"]
 
 	fileTypesField := multipart.Value["fileTypes"]
 
@@ -587,7 +551,7 @@ func sendMediaGroupHandler(c *gin.Context) error {
 	if err := json.Unmarshal([]byte(fileTypesField[0]), &data); err != nil {
 		return jsonHelper.ApiError{
 			Err:    "Error processing file types",
-			Status: 0,
+			Status: 400,
 		}
 	}
 
@@ -616,12 +580,6 @@ func sendMediaGroupHandler(c *gin.Context) error {
 		}
 	}
 
-	if channel.AssignedBotToken == "" {
-		return jsonHelper.ApiError{
-			Err:    "Channel has no assigned bot token",
-			Status: 404,
-		}
-	}
 
 	var filenames []string
 	var fileList []*io.Reader
@@ -649,7 +607,7 @@ func sendMediaGroupHandler(c *gin.Context) error {
 		fileModels = append(fileModels, fileModel)
 	}
 	//_, err := telegram.SendMediaGroupLazy(files, caption[0])
-	_, err = telegram.SendMediaGroup(channel.AssignedBotToken,fileList, filenames,fileModels, caption[0], channel.Name)
+	_, err = telegram.SendMediaGroup(botToken[0],fileList, filenames,fileModels, caption[0], channel.Name)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),

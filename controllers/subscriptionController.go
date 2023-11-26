@@ -187,13 +187,12 @@ type GetSubPlansResponse struct {
 }
 
 // @Summary Get subscription plans
-// @Tags posts
+// @Tags payments
 // @Description Get all available subscription plans
 // @ID GetSubPlans
 // @Accept json
 // @Produce json
-// @Success 200 controllers.GetSubPlansResponse
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Success 200 {string} string "Returns array of subscription plans (subscription type can be checked here : https://stripe.com/docs/api/plans)"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /payments/plans [get]
@@ -213,14 +212,15 @@ type AddPaymentMethodRequest struct {
 }
 
 // @Summary Add payment method
-// @Tags posts
+// @Tags payments
 // @Description Add payment method (card)
 // @ID AddPaymentMethod
 // @Accept json
 // @Produce json
 // @Param request body controllers.AddPaymentMethodRequest true "Card data"
-// @Success 200 controllers.GetSubPlansResponse
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Success 200 {string} string "Returns array of subscription plans (subscription type can be checked here : https://stripe.com/docs/api/plans)"
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /payments/paymentMethod/add [post]
@@ -237,7 +237,7 @@ func addPaymentMethodHandler(c *gin.Context) error {
 	if !exists {
 		return jsonHelper.ApiError{
 			Err:    "User unauthenticated",
-			Status: 401,
+			Status: 400,
 		}
 	}
 
@@ -276,14 +276,15 @@ type CreateSubscriptionRequest struct {
 }
 
 // @Summary Create subscription
-// @Tags posts
+// @Tags payments
 // @Description Create subscription
 // @ID CreateSub
 // @Accept json
 // @Produce json
 // @Param request body controllers.CreateSubscriptionRequest true "Card data"
-// @Success 200 {string} a
-// @Failure 400, 417 {object} jsonHelper.ApiError
+// @Success 200 {string} string "OK"
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /payments/subscription [post]
@@ -300,7 +301,7 @@ func subscriptionСreationHandler(c *gin.Context) error {
 	if !exists {
 		return jsonHelper.ApiError{
 			Err:    "User unauthenticated",
-			Status: 401,
+			Status: 400,
 		}
 	}
 
@@ -342,7 +343,7 @@ func customerExistsHandler(c *gin.Context) {
 	stripeService := payments.NewStripePaymentService()
 	customerExists, _ := stripeService.CustomerExists(fmt.Sprintf("%d", userEmail))
 	if !customerExists {
-		c.JSON(401, gin.H{"customerExists": "false"})
+		c.JSON(404, gin.H{"customerExists": "false"})
 		c.Abort()
 		return
 	}

@@ -16,6 +16,7 @@ type Post struct {
 	Scheduled 	time.Time `bson:"scheduled,omitempty" json:"scheduled"`
 	DeviceToken string `bson:"deviceToken"`
 	BotToken string `bson:"botToken"`
+	Archived bool `bson:"archived" json:"archived"`
 }
 //a
 

@@ -1,0 +1,1342 @@
+basePath: /
+definitions:
+  controllers.AddPaymentMethodRequest:
+    properties:
+      cardNumber:
+        type: string
+      cvc:
+        type: string
+      expMonth:
+        type: integer
+      expYear:
+        type: integer
+    type: object
+  controllers.ArchivedPosts:
+    properties:
+      posts:
+        items:
+          $ref: '#/definitions/models.Post'
+        type: array
+    type: object
+  controllers.AuthResponse:
+    properties:
+      accessToken:
+        type: string
+      refreshToken:
+        type: string
+    type: object
+  controllers.CreateSubscriptionRequest:
+    properties:
+      subscriptionType:
+        type: string
+    type: object
+  controllers.GetAllChannelsResponse:
+    properties:
+      channels:
+        items:
+          $ref: '#/definitions/models.Channel'
+        type: array
+    type: object
+  controllers.GetScheduledPostHandler:
+    properties:
+      posts:
+        items:
+          $ref: '#/definitions/models.Post'
+        type: array
+    type: object
+  controllers.LoginRequestBody:
+    properties:
+      email:
+        type: string
+      password:
+        type: string
+    type: object
+  controllers.ProfileResponse:
+    properties:
+      channelList:
+        items:
+          $ref: '#/definitions/models.Channel'
+        type: array
+      email:
+        type: string
+      subscriptionID:
+        type: string
+      subscriptionType:
+        type: integer
+    type: object
+  controllers.RefreshRequest:
+    properties:
+      refreshToken:
+        type: string
+    type: object
+  controllers.ScheduleMessageRequest:
+    properties:
+      botToken:
+        type: string
+      chat:
+        type: string
+      deviceToken:
+        type: string
+      scheduled:
+        type: string
+      text:
+        type: string
+      title:
+        type: string
+    type: object
+  controllers.SendLocationRequest:
+    properties:
+      botToken:
+        type: string
+      channelName:
+        type: string
+      latitude:
+        type: string
+      longitude:
+        type: string
+    type: object
+  controllers.SendMessageRequest:
+    properties:
+      botToken:
+        type: string
+      channelName:
+        type: string
+      text:
+        type: string
+    type: object
+  controllers.SendVenueRequest:
+    properties:
+      address:
+        type: string
+      botToken:
+        type: string
+      channelName:
+        type: string
+      latitude:
+        type: string
+      longitude:
+        type: string
+      title:
+        type: string
+    type: object
+  jsonHelper.ApiError:
+    properties:
+      error:
+        type: string
+      status:
+        type: integer
+    type: object
+  models.Channel:
+    properties:
+      assignedBotToken:
+        type: string
+      id:
+        type: string
+      name:
+        type: string
+      userId:
+        type: string
+    type: object
+  models.Post:
+    properties:
+      archived:
+        type: boolean
+      botToken:
+        type: string
+      chat:
+        type: string
+      content:
+        type: string
+      deviceToken:
+        type: string
+      files:
+        items:
+          type: string
+        type: array
+      id:
+        type: string
+      scheduled:
+        type: string
+      title:
+        type: string
+      type:
+        type: string
+      userId:
+        type: string
+    type: object
+host: localhost:8000
+info:
+  contact: {}
+  description: API server for SMM-auto application
+  title: SMM-Auto API
+  version: "1.0"
+paths:
+  /archive/:
+    get:
+      consumes:
+      - application/json
+      description: Get user's profile data
+      operationId: getProfile
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.ProfileResponse'
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Get profile handler
+      tags:
+      - auth
+  /auth/login:
+    post:
+      consumes:
+      - application/json
+      description: 'Login with email&password. Returns jwt tokens that should be saved
+        in application. the jwt token should be pinned to each request with header
+        (Example - "Authorization": Bearer jwtToken). If the given token is invalid
+        - 401 status error always gets thrown'
+      operationId: Login
+      parameters:
+      - description: account email
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.LoginRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.AuthResponse'
+        "403":
+          description: Wrong email/password
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "404":
+          description: Wrong email/password
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Login
+      tags:
+      - auth
+  /auth/refresh:
+    post:
+      consumes:
+      - application/json
+      description: Refresh jwt token
+      operationId: Refresh
+      parameters:
+      - description: Account info
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.RefreshRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.AuthResponse'
+        "400":
+          description: Error identifying user from token
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Refresh
+      tags:
+      - auth
+  /auth/signup:
+    post:
+      consumes:
+      - application/json
+      description: Signup
+      operationId: Signup
+      parameters:
+      - description: Account info
+        in: body
+        name: body
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.LoginRequestBody'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.AuthResponse'
+        "400":
+          description: User with such email already exists
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal server error (might be issue with stripe)
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Signup
+      tags:
+      - auth
+  /bot/sendAudio:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Send text message to some channel
+      operationId: SendAudio
+      parameters:
+      - description: Text of post
+        in: formData
+        name: caption
+        required: true
+        type: string
+      - description: Token of bot that manages given channels
+        in: formData
+        name: botToken
+        required: true
+        type: string
+      - description: Channel ID
+        in: formData
+        name: channelName
+        required: true
+        type: string
+      - description: Audio message file
+        in: formData
+        name: audio
+        required: true
+        type: file
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Send audio
+      tags:
+      - bot
+  /bot/sendLocation:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Send location message to some channel
+      operationId: SendLocation
+      parameters:
+      - description: Location body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SendLocationRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Send location
+      tags:
+      - bot
+  /bot/sendMessage:
+    post:
+      consumes:
+      - application/json
+      description: Send text message to some channel
+      operationId: SendMessage
+      parameters:
+      - description: Message body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SendMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "404":
+          description: Channel with given ID does not exist
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Send message
+      tags:
+      - bot
+  /bot/sendPhoto:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Send mediagroup message to some channel
+      operationId: SendMediaGroup
+      parameters:
+      - description: Text of post
+        in: formData
+        name: caption
+        required: true
+        type: string
+      - description: Media message file (max of 10 files are allowed)
+        in: formData
+        name: media
+        required: true
+        type: file
+      - description: ID of channel
+        in: formData
+        name: chat
+        required: true
+        type: string
+      - description: 'Stringified map of each file type (Example: \'
+        in: formData
+        name: fileTypes
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Send media
+      tags:
+      - bot
+  /bot/sendVenue:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Send venue
+      operationId: SendVenue
+      parameters:
+      - description: Venue request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.SendVenueRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Send venue
+      tags:
+      - bot
+  /bot/sendVideo:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Send video message to some channel
+      operationId: SendVideo
+      parameters:
+      - description: Text of post
+        in: formData
+        name: caption
+        required: true
+        type: string
+      - description: Voice message file
+        in: formData
+        name: video
+        required: true
+        type: file
+      - description: Channel ID
+        in: formData
+        name: channelName
+        required: true
+        type: string
+      - description: Token of bot that manages given channels
+        in: formData
+        name: botToken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Send video
+      tags:
+      - bot
+  /bot/sendVideoNote:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Send video message to some channel
+      operationId: SendVideoNote
+      parameters:
+      - description: Voice message file
+        in: formData
+        name: videoNote
+        required: true
+        type: file
+      - description: Channel ID
+        in: formData
+        name: channelName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Send video
+      tags:
+      - bot
+  /bot/sendVoice:
+    post:
+      consumes:
+      - multipart/form-data
+      description: Send voice message to some channel
+      operationId: SendVoice
+      parameters:
+      - description: Text of post
+        in: formData
+        name: caption
+        required: true
+        type: string
+      - description: Voice message file
+        in: formData
+        name: voice
+        required: true
+        type: file
+      - description: Channel ID
+        in: formData
+        name: channelName
+        required: true
+        type: string
+      - description: Token of bot that manages given channels
+        in: formData
+        name: botToken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Send voice
+      tags:
+      - bot
+  /channel/:
+    get:
+      consumes:
+      - application/json
+      description: Returns an array of Channel objects
+      operationId: GetAllChannels
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.GetAllChannelsResponse'
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Get all channels
+      tags:
+      - channel
+  /channel/add:
+    post:
+      consumes:
+      - application/json
+      description: Remove channel from user's list
+      operationId: DeleteChannel
+      parameters:
+      - description: channel ID
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "403":
+          description: User does not have access to this channel
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Delete channel
+      tags:
+      - channel
+  /payments/paymentMethod/add:
+    post:
+      consumes:
+      - application/json
+      description: Add payment method (card)
+      operationId: AddPaymentMethod
+      parameters:
+      - description: Card data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.AddPaymentMethodRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Returns array of subscription plans (subscription type can
+            be checked here : https://stripe.com/docs/api/plans)'
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Add payment method
+      tags:
+      - payments
+  /payments/plans:
+    get:
+      consumes:
+      - application/json
+      description: Get all available subscription plans
+      operationId: GetSubPlans
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: 'Returns array of subscription plans (subscription type can
+            be checked here : https://stripe.com/docs/api/plans)'
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Get subscription plans
+      tags:
+      - payments
+  /payments/subscription:
+    post:
+      consumes:
+      - application/json
+      description: Create subscription
+      operationId: CreateSub
+      parameters:
+      - description: Card data
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.CreateSubscriptionRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Create subscription
+      tags:
+      - payments
+  /schedule/:
+    get:
+      consumes:
+      - application/json
+      description: Receive all scheduled posts
+      operationId: GetScheduledPosts
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            $ref: '#/definitions/controllers.GetScheduledPostHandler'
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal server error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Get all scheduled posts
+      tags:
+      - posts
+  /schedule/{id}:
+    get:
+      consumes:
+      - application/json
+      description: Receive post's image banner
+      operationId: GetPost
+      parameters:
+      - description: ID of post to receive
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Bad Request
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Receive post by id
+      tags:
+      - posts
+  /schedule/audio:
+    post:
+      consumes:
+      - application/json
+      description: Schedule message
+      operationId: ScheduleMessage
+      parameters:
+      - description: Request body
+        in: body
+        name: request
+        required: true
+        schema:
+          $ref: '#/definitions/controllers.ScheduleMessageRequest'
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Schedule message
+      tags:
+      - posts
+  /schedule/date/{scheduled}:
+    get:
+      consumes:
+      - application/json
+      description: Receive posts by date
+      operationId: GetPostsByDate
+      parameters:
+      - description: Date
+        in: query
+        name: scheduled
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Get posts by date
+      tags:
+      - posts
+  /schedule/delete/{id}:
+    delete:
+      consumes:
+      - application/json
+      description: Delete post by id
+      operationId: DeletePost
+      parameters:
+      - description: ID of post to delete
+        in: path
+        name: id
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Inernal server error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Delete post by id
+      tags:
+      - posts
+  /schedule/image/{imageName}:
+    post:
+      consumes:
+      - application/json
+      description: Receive post's image banner
+      operationId: GetPostsImage
+      parameters:
+      - description: Name of the image
+        in: path
+        name: imageName
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Get post's image
+      tags:
+      - posts
+  /schedule/mediaGroup:
+    post:
+      consumes:
+      - application/json
+      description: Schedule mediagroup
+      operationId: ScheduleMediaGroup
+      parameters:
+      - description: Text of post
+        in: formData
+        name: caption
+        required: true
+        type: string
+      - description: Media message file
+        in: formData
+        name: media
+        required: true
+        type: file
+      - description: Channel name
+        in: formData
+        name: channelName
+        required: true
+        type: string
+      - description: Title of post (in-app only, won't affect telegram)
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Channel name
+        in: formData
+        name: scheduled
+        required: true
+        type: string
+      - description: Device token (required for notification sending)
+        in: formData
+        name: deviceToken
+        required: true
+        type: string
+      - description: Bot token
+        in: formData
+        name: botToken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Schedule mediagroup
+      tags:
+      - posts
+  /schedule/photo:
+    post:
+      consumes:
+      - application/json
+      description: Schedule photo
+      operationId: SchedulePhoto
+      parameters:
+      - description: Text of post
+        in: formData
+        name: caption
+        required: true
+        type: string
+      - description: photo message file
+        in: formData
+        name: photo
+        required: true
+        type: file
+      - description: Channel name
+        in: formData
+        name: channelName
+        required: true
+        type: string
+      - description: Title of post (in-app only, won't affect telegram)
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Scheduled date
+        in: formData
+        name: scheduled
+        required: true
+        type: string
+      - description: Device token (required for notification sending)
+        in: formData
+        name: deviceToken
+        required: true
+        type: string
+      - description: Bot token
+        in: formData
+        name: botToken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Schedule photo
+      tags:
+      - posts
+  /schedule/video:
+    post:
+      consumes:
+      - application/json
+      description: Schedule video
+      operationId: ScheduleVideo
+      parameters:
+      - description: Text of post
+        in: formData
+        name: caption
+        required: true
+        type: string
+      - description: Video message file
+        in: formData
+        name: video
+        required: true
+        type: file
+      - description: Channel name
+        in: formData
+        name: channelName
+        required: true
+        type: string
+      - description: Title of post (in-app only, won't affect telegram)
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Scheduled date
+        in: formData
+        name: scheduled
+        required: true
+        type: string
+      - description: Device token (required for notification sending)
+        in: formData
+        name: deviceToken
+        required: true
+        type: string
+      - description: Bot token
+        in: formData
+        name: botToken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Schedule video
+      tags:
+      - posts
+  /schedule/video/{videoName}:
+    get:
+      consumes:
+      - application/json
+      description: Receive post's video banner
+      operationId: GetPostsVideo
+      parameters:
+      - description: Name of the image
+        in: path
+        name: videoName
+        required: true
+        type: string
+      produces:
+      - application/octet-stream
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Get posts videos
+      tags:
+      - posts
+  /schedule/voice:
+    post:
+      consumes:
+      - application/json
+      description: Receive all scheduled posts
+      operationId: ScheduleVoice
+      parameters:
+      - description: Text of post
+        in: formData
+        name: caption
+        required: true
+        type: string
+      - description: Voice message file
+        in: formData
+        name: audio
+        required: true
+        type: file
+      - description: Channel name
+        in: formData
+        name: channelName
+        required: true
+        type: string
+      - description: Title of post (in-app only, won't affect telegram)
+        in: formData
+        name: title
+        required: true
+        type: string
+      - description: Scheduled date
+        in: formData
+        name: scheduled
+        required: true
+        type: string
+      - description: Device token (required for notification sending)
+        in: formData
+        name: deviceToken
+        required: true
+        type: string
+      - description: Bot token
+        in: formData
+        name: botToken
+        required: true
+        type: string
+      produces:
+      - application/json
+      responses:
+        "200":
+          description: OK
+          schema:
+            type: string
+        "400":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "417":
+          description: Error identifying user
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        "500":
+          description: Internal Server Error
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+        default:
+          description: ""
+          schema:
+            $ref: '#/definitions/jsonHelper.ApiError'
+      summary: Schedule voice
+      tags:
+      - posts
+securityDefinitions:
+  ApiKeyAuth:
+    in: header
+    name: Authorization
+    type: apiKey
+swagger: "2.0"

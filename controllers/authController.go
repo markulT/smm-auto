@@ -16,7 +16,7 @@ import (
 
 func SetupAuthRoutes(r *gin.Engine) {
 	authGroup := r.Group("/auth")
-	authGroup.POST("/login", jsonHelper.MakeHttpHandler(login))
+	authGroup.POST("/login", jsonHelper.MakeHttpHandler(loginHandler))
 	authGroup.POST("/refresh", jsonHelper.MakeHttpHandler(refresh))
 	authGroup.POST("/signup", jsonHelper.MakeHttpHandler(signup))
 
@@ -47,6 +47,19 @@ type ProfileResponse struct {
 	SubscriptionType int    `json:"subscriptionType"`
 }
 
+
+// @Summary Get profile handler
+// @Tags auth
+// @Description Get user's profile data
+// @ID getProfile
+// @Accept json
+// @Produce json
+// @Success 200 {object} controllers.ProfileResponse
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 417 {object} jsonHelper.ApiError "Error identifying user"
+// @Failure 500 {object} jsonHelper.ApiError "Internal server error"
+// @Failure default {object} jsonHelper.ApiError
+// @Router /archive/ [get]
 func getProfileHandler(c *gin.Context) error {
 	authUserEmail, exists := c.Get("userEmail")
 	if !exists {
@@ -119,20 +132,18 @@ func setDeviceTokenHandler(c *gin.Context) error {
 
 // @Summary Login
 // @Tags auth
-// @Description Login with email&password. Returns jwt tokens that should be saved in application
+// @Description Login with email&password. Returns jwt tokens that should be saved in application. the jwt token should be pinned to each request with header (Example - "Authorization": Bearer jwtToken). If the given token is invalid - 401 status error always gets thrown
 // @ID Login
 // @Accept json
 // @Produce json
-// @Param email body string true "account email"
+// @Param body body LoginRequestBody true "account email"
 // @Success 200 {object} controllers.AuthResponse
-// @Failure 403, 404 {object} jsonHelper.ApiError
+// @Failure 403 {object} jsonHelper.ApiError "Wrong email/password"
+// @Failure 404 {object} jsonHelper.ApiError "Wrong email/password"
 // @Failure default {object} jsonHelper.ApiError
 // @Router /auth/login [post]
-func login(c *gin.Context) error {
-	var body struct {
-		Email    string `json:"email"`
-		Password string `json:"password"`
-	}
+func loginHandler(c *gin.Context) error {
+	var body LoginRequestBody
 
 	jsonHelper.BindWithException(&body, c)
 	userFromDB, err := repository.GetUserByEmail(body.Email)
@@ -172,9 +183,9 @@ type RefreshRequest struct {
 // @ID Refresh
 // @Accept json
 // @Produce json
-// @Param request body controllers.RefreshRequest true "Account info"
+// @Param body body controllers.RefreshRequest true "Account info"
 // @Success 200 {object} controllers.AuthResponse
-// @Failure 400, 403, 404 {object} jsonHelper.ApiError
+// @Failure 400 {object} jsonHelper.ApiError "Error identifying user from token"
 // @Failure default {object} jsonHelper.ApiError
 // @Router /auth/refresh [post]
 func refresh(c *gin.Context) error {
@@ -217,10 +228,10 @@ func refresh(c *gin.Context) error {
 // @ID Signup
 // @Accept json
 // @Produce json
-// @Param request body controllers.LoginRequestBody true "Account info"
+// @Param body body controllers.LoginRequestBody true "Account info"
 // @Success 200 {object} controllers.AuthResponse
-// @Failure 400, 403, 404 {object} jsonHelper.ApiError
-// @Failure 500 {object} jsonHelper.ApiError
+// @Failure 400 {object} jsonHelper.ApiError "User with such email already exists"
+// @Failure 500 {object} jsonHelper.ApiError "Internal server error (might be issue with stripe)"
 // @Failure default {object} jsonHelper.ApiError
 // @Router /auth/signup [post]
 func signup(c *gin.Context) error {
@@ -266,14 +277,14 @@ func signup(c *gin.Context) error {
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
-			Status: 400,
+			Status: 500,
 		}
 	}
 	err = repository.UpdateCustomerIDByEmail(body.Email, customerID)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
-			Status: 400,
+			Status: 500,
 		}
 	}
 	c.JSON(200, gin.H{
