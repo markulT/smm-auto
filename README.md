@@ -1,4 +1,4 @@
-### Default
+## Default
 
 Setup required docker containers
 
@@ -11,7 +11,7 @@ And then simply run the main.go
 go run main.go
 ```
 
-### Only swagger
+## Only swagger
 This version only includes swagger docs
 
 To run it , you have to simply run \cmd\swagger\main.go without docker containers
@@ -19,3 +19,7 @@ To run it , you have to simply run \cmd\swagger\main.go without docker container
 ```bash
 go run .\cmd\swagger\main.go
 ```
+
+### How to access
+
+1. To access docs you can either go to html version (/swagger/index.html) or by using .json or .yaml files
