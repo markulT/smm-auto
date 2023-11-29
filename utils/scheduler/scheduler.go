@@ -140,7 +140,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 					continue
 				}
 
-				//notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 				fmt.Println(files)
 				fmt.Println(filenames)
 				fmt.Println(fileModels)
