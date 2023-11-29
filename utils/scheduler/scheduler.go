@@ -72,7 +72,8 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 
 		currentTime := time.Now().In(time.FixedZone(originalTimezone, offset))
 		if scheduledPost.Scheduled.Before(currentTime) {
-
+			fmt.Println("Running for post")
+			fmt.Println(scheduledPost.Files)
 			switch scheduledPost.Type {
 			case "message":
 				telegram.SendMessage(scheduledPost.BotToken,scheduledPost.Text, scheduledPost.ChannelName)
@@ -110,26 +111,40 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				var fileModels []models.File
 				for _, fileID := range scheduledPost.Files {
 					media, err := s3.GetMedia(fileID.String())
+
 					if err != nil {
-						return
+						continue
 					}
 					fileModel, err := fileRepo.FindByID(context.Background(), fileID)
+					if err != nil {
+						fmt.Println(err)
+						continue
+					}
+					//
 					filenames = append(filenames, fileID.String())
 					files = append(files, &media)
+
+					fmt.Println(fileID)
+					fmt.Println(fileModel)
 					fileModels = append(fileModels, *fileModel)
 				}
 				_, err := telegram.SendMediaGroup(scheduledPost.BotToken,files, filenames,fileModels, scheduledPost.Text,  scheduledPost.ChannelName)
 				if err != nil {
-					return
+					continue
 				}
 				for _, fileID := range scheduledPost.Files {
 					_ = s3.DeleteMedia(fileID.String())
 				}
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				if err != nil {
-					return
+					continue
 				}
-				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+
+				//notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
+				fmt.Println(files)
+				fmt.Println(filenames)
+				fmt.Println(fileModels)
+				fmt.Println(fileRepo)
 			case "video":
 				file, err := s3.GetVideo(scheduledPost.Files[0].String())
 				if err != nil {

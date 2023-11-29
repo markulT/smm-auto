@@ -824,6 +824,8 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 
 	for _, entry := range data {
 		for filename, fileType := range entry {
+			fmt.Println(fileType)
+			fmt.Println(filename)
 			fileTypeMap[filename] = fileType
 		}
 	}

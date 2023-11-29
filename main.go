@@ -13,8 +13,24 @@ import (
 	"golearn/utils/archiveCleaner"
 	"golearn/utils/s3"
 	"golearn/utils/scheduler"
+	"os"
+	"runtime"
+	"runtime/pprof"
+	"testing"
 )
 
+func TestMemoryLeak(t *testing.T) {
+	runtime.MemProfileRate = 1
+
+	// Your test logic here
+
+	f, err := os.Create("memprofile")
+	if err != nil {
+		t.Fatal(err)
+	}
+	pprof.WriteHeapProfile(f)
+	f.Close()
+}
 
 func init() {
 	utils.LoadEnvVariables()

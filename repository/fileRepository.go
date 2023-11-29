@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"golearn/models"
@@ -21,9 +22,10 @@ func NewFileRepo() FileRepository {
 }
 
 func (fr *fileRepoImpl) FindByID(c context.Context, fID uuid.UUID) (*models.File, error) {
-	var f *models.File
+	f := new(models.File)
 
 	fileCollection := utils.DB.Collection("files")
+	fmt.Println(fID)
 	res := fileCollection.FindOne(c, bson.M{"_id":fID})
 
 	if res.Err()!=nil {
