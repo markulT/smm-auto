@@ -72,8 +72,6 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 
 		currentTime := time.Now().In(time.FixedZone(originalTimezone, offset))
 		if scheduledPost.Scheduled.Before(currentTime) {
-			fmt.Println("Running for post")
-			fmt.Println(scheduledPost.Files)
 			switch scheduledPost.Type {
 			case "message":
 				telegram.SendMessage(scheduledPost.BotToken,scheduledPost.Text, scheduledPost.ChannelName)
@@ -124,8 +122,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 					filenames = append(filenames, fileID.String())
 					files = append(files, &media)
 
-					fmt.Println(fileID)
-					fmt.Println(fileModel)
+
 					fileModels = append(fileModels, *fileModel)
 				}
 				_, err := telegram.SendMediaGroup(scheduledPost.BotToken,files, filenames,fileModels, scheduledPost.Text,  scheduledPost.ChannelName)
@@ -141,10 +138,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				}
 
 				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
-				fmt.Println(files)
-				fmt.Println(filenames)
-				fmt.Println(fileModels)
-				fmt.Println(fileRepo)
+
 			case "video":
 				file, err := s3.GetVideo(scheduledPost.Files[0].String())
 				if err != nil {

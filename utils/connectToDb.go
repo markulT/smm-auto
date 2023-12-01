@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 	"log"
@@ -26,6 +27,7 @@ var DB *mongo.Database
 func ConnectToDb() {
 
 	mongoUri := os.Getenv("DB_URL")
+	fmt.Println()
 	mongoOptions := options.Client().ApplyURI(mongoUri)
 	client, err := mongo.Connect(context.TODO(), mongoOptions)
 	if err != nil {

@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"go.mongodb.org/mongo-driver/bson"
@@ -117,16 +116,12 @@ func GetUserByEmail(email string) (models.User, error)  {
 	var user models.User
 	var usersCollection = utils.DB.Collection("users")
 	res := usersCollection.FindOne(context.Background(), bson.M{"email": email})
-	fmt.Println(res)
+
 	err := res.Decode(&user)
 	if err != nil {
-		fmt.Println("aboba")
-		fmt.Println(err.Error())
+
 		return models.User{}, err
 	}
-	fmt.Println("huynia")
-	fmt.Println(user)
-	fmt.Println(email)
 
 	return user, nil
 }

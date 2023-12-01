@@ -105,7 +105,7 @@ func getPostsByDate(c *gin.Context) error {
 
 	if err != nil {
 		return jsonHelper.ApiError{
-			Err:    "Error parsing this huynia",
+			Err:    "Error parsing time",
 			Status: 400,
 		}
 	}
@@ -312,6 +312,7 @@ type GetScheduledPostHandler struct {
 // @Router /schedule/ [get]
 func getScheduledPostHandler(c *gin.Context) error {
 	postsRepo := mongoRepository.NewPostRepository()
+	fileRepo := mongoRepository.NewFileRepo()
 	authUserEmail, exists := c.Get("userEmail")
 	if !exists {
 		return jsonHelper.ApiError{
@@ -335,7 +336,26 @@ func getScheduledPostHandler(c *gin.Context) error {
 	for {
 		select {
 		case posts := <-postsch:
-			c.JSON(200, gin.H{"posts": posts})
+			var responsePostList []*ResponsePost
+			for _, post := range posts {
+				if len(post.Files) > 0 {
+					files, err := fileRepo.FindManyByIDList(context.Background(), post.Files)
+				if err != nil {
+					return jsonHelper.ApiError{
+						Err:    "Failed to load filetypes",
+						Status: 500,
+					}
+				}
+				rp := ResponsePost{Post : post, Files: files}
+				responsePostList = append(responsePostList, &rp)
+				} else {
+
+					files := make([]models.File, 0)
+					rp := ResponsePost{post,files}
+					responsePostList = append(responsePostList, &rp)
+				}
+			}
+			c.JSON(200, gin.H{"posts":responsePostList})
 			c.Abort()
 			return nil
 		case <-ctx.Done():

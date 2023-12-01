@@ -58,7 +58,7 @@ func getAllChannelsHandler(c *gin.Context) error {
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
 	if err != nil {
 		return jsonHelper.ApiError{
-			Err:    "Some huynia happened",
+			Err:    "Error identifying user",
 			Status: 417,
 		}
 	}

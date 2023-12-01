@@ -187,7 +187,6 @@ func SendMediaGroup(botToken string,files []*io.Reader,filenames[]string,fileMod
 
 
 	bot, err := telego.NewBot(botToken, telego.WithDefaultDebugLogger())
-	fmt.Println(bot)
 	//defer bot.Close()
 	if err != nil {
 		return "", err
@@ -199,45 +198,39 @@ func SendMediaGroup(botToken string,files []*io.Reader,filenames[]string,fileMod
 		fileModel := fileModels[index]
 		switch fileModel.Type {
 		case "photo":
-			fmt.Println("processing this file photo")
-			fmt.Println(file)
+
 			customReader := &CustomReader{reader:*file,filename: filenames[index]}
-			fmt.Println(customReader.filename)
+
 			media := telegoutil.MediaPhoto(telego.InputFile{
 				File: customReader,
 			})
-			fmt.Println(media)
+
 
 			if index == 0 {
 				media = media.WithCaption(caption)
 			}
 			mediaItems = append(mediaItems, media)
 		case "video":
-			fmt.Println("processing this file video")
-			fmt.Println(file)
-			//customReader := &CustomReader{reader:*file,filename: filenames[index]}
-			//media := telegoutil.MediaVideo(telego.InputFile{
-			//	File: customReader,
-			//})
-			//if index == 0 {
-			//	media = media.WithCaption(caption)
-			//}
-			//mediaItems = append(mediaItems, media)
+			customReader := &CustomReader{reader:*file,filename: filenames[index]}
+			media := telegoutil.MediaVideo(telego.InputFile{
+				File: customReader,
+			})
+			if index == 0 {
+				media = media.WithCaption(caption)
+			}
+			mediaItems = append(mediaItems, media)
 		case "audio":
-			fmt.Println("processing this file audio")
-			fmt.Println(file)
-			//customReader := &CustomReader{reader:*file,filename: filenames[index]}
-			//media := telegoutil.MediaAudio(telego.InputFile{
-			//	File: customReader,
-			//})
-			//if index == 0 {
-			//	media = media.WithCaption(caption)
-			//}
-			//mediaItems = append(mediaItems, media)
+			customReader := &CustomReader{reader:*file,filename: filenames[index]}
+			media := telegoutil.MediaAudio(telego.InputFile{
+				File: customReader,
+			})
+			if index == 0 {
+				media = media.WithCaption(caption)
+			}
+			mediaItems = append(mediaItems, media)
 		}
 	}
 	mdGroup := telegoutil.MediaGroup(telegoutil.Username(channelName), mediaItems...)
-	fmt.Println(mdGroup)
 	_, err = bot.SendMediaGroup(mdGroup)
 	if err != nil {
 		return "", err
@@ -471,8 +464,7 @@ func SendVideo(botToken string,file *os.File, caption string, chatId string, fil
 
 	_, err = io.Copy(imageField, file)
 	if err != nil {
-		fmt.Println(
-			"error copying huynia")
+
 		fmt.Println(err)
 		return "", err
 	}

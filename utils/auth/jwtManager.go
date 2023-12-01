@@ -71,6 +71,5 @@ func GetSubject(tokenString string) (string, error)  {
 	}
 	//a
 	claims:=token.Claims.(jwt.MapClaims)
-	fmt.Println(claims)
 	return claims["email"].(string), nil
 }

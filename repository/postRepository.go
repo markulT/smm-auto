@@ -21,7 +21,9 @@ type PostRepository interface {
 	GetAllArchivedPostsByUserID(c context.Context, userID uuid.UUID) ([]models.Post, error)
 }
 
-type postRepositoryImpl struct {}
+type postRepositoryImpl struct {
+
+}
 
 func NewPostRepository() PostRepository {
 	return &postRepositoryImpl{}
