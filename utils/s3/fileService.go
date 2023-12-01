@@ -9,6 +9,8 @@ import (
 
 type FileService interface {
 	GetFileByID(c context.Context, fID uuid.UUID) (io.Reader, error)
+	DeleteOneByID(c context.Context, fID uuid.UUID) error
+	DeleteManyByID(c context.Context, fIDs []uuid.UUID) error
 }
 
 type FileRepository interface {
@@ -16,6 +18,7 @@ type FileRepository interface {
 	DeleteByID(c context.Context, fID uuid.UUID) error
 	FindByID(c context.Context, fID uuid.UUID) (*models.File, error)
 	FindManyByIDList(c context.Context, fIDs []uuid.UUID) ([]models.File, error)
+	DeleteManyByIdList(c context.Context, fIDs []uuid.UUID) error
 }
 
 type fileServiceImpl struct {
@@ -35,4 +38,34 @@ func (fs *fileServiceImpl) GetFileByID( c context.Context,fID uuid.UUID) (io.Rea
 	return GetFile(fileModel.BucketName,fileModel.ID.String())
 }
 
+func (fs *fileServiceImpl) DeleteOneByID(c context.Context, fID uuid.UUID) error {
 
+	fileModel, err := fs.fileRepo.FindByID(c, fID)
+	if err != nil {
+		return err
+	}
+	_ = DeleteFile(fileModel.BucketName, fileModel.ID.String())
+	//if err != nil {
+	//	return err
+	//}
+	err = fs.fileRepo.DeleteByID(c, fID)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (fs *fileServiceImpl) DeleteManyByID(c context.Context, fIDs []uuid.UUID) error {
+	fileModels, err := fs.fileRepo.FindManyByIDList(c,fIDs)
+	if err != nil {
+		return err
+	}
+	for _, file := range fileModels {
+		_ = DeleteFile(file.BucketName, file.ID.String())
+	}
+	err=fs.fileRepo.DeleteManyByIdList(c, fIDs)
+	if err != nil {
+		return err
+	}
+	return nil
+}

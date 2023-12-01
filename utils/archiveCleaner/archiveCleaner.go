@@ -6,11 +6,14 @@ import (
 	"golearn/models"
 	"golearn/repository"
 	"golearn/utils"
+	"golearn/utils/s3"
 	"os"
 	"strconv"
 	"sync"
 	"time"
 )
+
+
 
 func RunArchiveCleaner() {
 	ticker := time.NewTicker(1*time.Minute)
@@ -49,6 +52,9 @@ func getTableLength(tableName string) int64 {
 }
 
 func processBatch(start, end int, wg *sync.WaitGroup)  {
+	fileRepo := repository.NewFileRepo()
+	fileService := s3.NewFileService(fileRepo)
+
 	defer wg.Done()
 
 	var archivedPosts []models.Post
@@ -59,6 +65,7 @@ func processBatch(start, end int, wg *sync.WaitGroup)  {
 		if archivedPost.Scheduled.Before(ago) {
 			//repository.ArchivizePost(archivedPost.ID)
 			repository.DeleteScheduledPostById(context.Background(),archivedPost.ID)
+			fileService.DeleteManyByID(context.Background(), archivedPost.Files)
 		}
 	}
 

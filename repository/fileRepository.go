@@ -13,12 +13,22 @@ type FileRepository interface {
 	DeleteByID(c context.Context, fID uuid.UUID) error
 	FindByID(c context.Context, fID uuid.UUID) (*models.File, error)
 	FindManyByIDList(c context.Context, fIDs []uuid.UUID) ([]models.File, error)
+	DeleteManyByIdList(c context.Context, fIDs []uuid.UUID) error
 }
 
 type fileRepoImpl struct {}
 
 func NewFileRepo() FileRepository {
 	return &fileRepoImpl{}
+}
+
+func (fr *fileRepoImpl) DeleteManyByIdList(c context.Context, fIDs []uuid.UUID) error {
+	fileCollection := utils.DB.Collection("files")
+	_, err:= fileCollection.DeleteMany(c, bson.M{"_id":bson.M{"$in":fIDs}})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (fr *fileRepoImpl) FindManyByIDList(c context.Context, fIDs []uuid.UUID) ([]models.File, error) {

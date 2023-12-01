@@ -89,10 +89,10 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				if err != nil {
 					continue
 				}
-				err = s3.DeleteImage(scheduledPost.Files[0].String())
-				if err != nil {
-					continue
-				}
+				//err = s3.DeleteImage(scheduledPost.Files[0].String())
+				//if err != nil {
+				//	continue
+				//}
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				if err != nil {
 					continue
@@ -129,9 +129,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				if err != nil {
 					continue
 				}
-				for _, fileID := range scheduledPost.Files {
-					_ = s3.DeleteMedia(fileID.String())
-				}
+
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				if err != nil {
 					continue
