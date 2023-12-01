@@ -290,7 +290,19 @@ func getPostHandler(c *gin.Context) error {
 			Status: 403,
 		}
 	}
-	c.JSON(200, gin.H{"post": post})
+	fileRepo := mongoRepository.NewFileRepo()
+	var postFiles []models.File
+	if len(post.Files) > 0 {
+		postFiles, err = fileRepo.FindManyByIDList(context.Background(), post.Files)
+		if err != nil {
+			return jsonHelper.ApiError{
+				Err:    "Failed to load filetypes",
+				Status: 500,
+			}
+		}
+	}
+	rp := ResponsePost{post, postFiles}
+	c.JSON(200, gin.H{"post": rp})
 	return nil
 }
 
