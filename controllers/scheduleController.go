@@ -51,6 +51,8 @@ func SetupScheduleRoutes(r *gin.Engine) {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/video/{videoName} [get]
 func getPostsVideo(c *gin.Context) error {
+	fileRepo := mongoRepository.NewFileRepo()
+	fileService := s3.NewFileService(fileRepo)
 	videoName, err := uuid.Parse(c.Param("videoName"))
 
 	if err != nil {
@@ -60,7 +62,8 @@ func getPostsVideo(c *gin.Context) error {
 		}
 	}
 
-	image, err := s3.GetVideo(videoName.String())
+	//image, err := s3.GetVideo(videoName.String())
+	image, err := fileService.GetFileByID(context.Background(), videoName)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -153,6 +156,8 @@ func getPostsByDate(c *gin.Context) error {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/image/{imageName} [post]
 func getPostImage(c *gin.Context) error {
+	fileRepo := mongoRepository.NewFileRepo()
+	fileService := s3.NewFileService(fileRepo)
 	imageName, err := uuid.Parse(c.Param("imageName"))
 
 	if err != nil {
@@ -162,7 +167,8 @@ func getPostImage(c *gin.Context) error {
 		}
 	}
 
-	image, err := s3.GetImage(imageName.String())
+	//image, err := s3.GetImage(imageName.String())
+	image, err := fileService.GetFileByID(context.Background(), imageName)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
