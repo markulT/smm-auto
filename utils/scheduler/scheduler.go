@@ -77,7 +77,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				telegram.SendMessage(scheduledPost.BotToken,scheduledPost.Text, scheduledPost.ChannelName)
 				err := repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				if err != nil {
-					return
+					continue
 				}
 				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 			case "photo":
@@ -140,7 +140,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 			case "video":
 				file, err := s3.GetVideo(scheduledPost.Files[0].String())
 				if err != nil {
-					return
+					continue
 				}
 				_, err = telegram.SendVideoBytes(scheduledPost.BotToken,file, scheduledPost.Files[0].String(), scheduledPost.Text, scheduledPost.ChannelName)
 				if err != nil {
@@ -149,24 +149,27 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 			case "audio":
+				fmt.Println("Processing audio")
 				file, err := s3.GetAudio(scheduledPost.Files[0].String())
 				if err != nil {
-					return
+					fmt.Println(err.Error())
+					continue
 				}
 				_,err = telegram.SendAudioBytes(scheduledPost.BotToken,file, scheduledPost.Text,  scheduledPost.ChannelName, scheduledPost.Files[0].String())
 				if err != nil {
-					return
+					fmt.Println(err.Error())
+					continue
 				}
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 			case "voice":
 				file, err := s3.GetAudio(scheduledPost.Files[0].String())
 				if err != nil {
-					return
+					continue
 				}
 				_,err = telegram.SendVoiceBytes(scheduledPost.BotToken,file, scheduledPost.Text,  scheduledPost.ChannelName, scheduledPost.Files[0].String())
 				if err != nil {
-					return
+					continue
 				}
 				//err = repository.DeleteScheduledPostById(scheduledPost.ID)
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)

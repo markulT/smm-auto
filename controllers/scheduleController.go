@@ -405,6 +405,24 @@ func getScheduledPostHandler(c *gin.Context) error {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/voice [post]
 func scheduleVoiceHandler(c *gin.Context) error {
+
+	fileRepo := mongoRepository.NewFileRepo()
+
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
+
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["audio"]
 	caption := multipart.Value["caption"]
@@ -446,6 +464,15 @@ func scheduleVoiceHandler(c *gin.Context) error {
 			Status: 400,
 		}
 	}
+
+	fileID, err := uuid.NewRandom()
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+
 	post := models.Post{
 		Title:       title[0],
 		ID:          postID,
@@ -456,7 +483,24 @@ func scheduleVoiceHandler(c *gin.Context) error {
 		Scheduled:   parsedTime,
 		DeviceToken: deviceToken[0],
 		BotToken: botToken[0],
+		UserID:      user.ID,
 	}
+
+	savedFile := models.File{
+		ID:         fileID,
+		BucketName: os.Getenv("audioBucketName"),
+		Type:       "audio",
+		PostID:     postID,
+	}
+
+	err = fileRepo.Save(context.Background(), &savedFile)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Error saving file",
+			Status: 500,
+		}
+	}
+
 	err = mongoRepository.SaveScheduledPost(context.Background(),&post)
 	if err != nil {
 		return jsonHelper.ApiError{
@@ -498,6 +542,21 @@ func scheduleVoiceHandler(c *gin.Context) error {
 func scheduleAudioHandler(c *gin.Context) error {
 
 	fileRepo := mongoRepository.NewFileRepo()
+
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
 
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["audio"]
@@ -553,10 +612,11 @@ func scheduleAudioHandler(c *gin.Context) error {
 		Text:        caption[0],
 		ChannelName: channel.Name,
 		Type:        "audio",
-		Files:       []uuid.UUID{postID},
+		Files:       []uuid.UUID{fileID},
 		Scheduled:   parsedTime,
 		DeviceToken: deviceToken[0],
 		BotToken: botToken[0],
+		UserID:      user.ID,
 	}
 	savedFile := models.File{
 		ID:         fileID,
@@ -581,7 +641,7 @@ func scheduleAudioHandler(c *gin.Context) error {
 			Status: 500,
 		}
 	}
-	err = s3.LoadAudio(postID.String(), &file)
+	err = s3.LoadAudio(fileID.String(), &file)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -728,7 +788,6 @@ func schedulePhotoHandler(c *gin.Context) error {
 	}
 
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
-	fmt.Println(parsedTime.Zone())
 	file, err := files[0].Open()
 	defer file.Close()
 	if err != nil {
@@ -766,7 +825,7 @@ func schedulePhotoHandler(c *gin.Context) error {
 		Text:        caption[0],
 		ChannelName: channel.Name,
 		Type:        "photo",
-		Files:       []uuid.UUID{postID},
+		Files:       []uuid.UUID{fileID},
 		Scheduled:   parsedTime,
 		DeviceToken: deviceToken[0],
 		BotToken: botToken[0],
@@ -793,6 +852,7 @@ func schedulePhotoHandler(c *gin.Context) error {
 
 		return nil, nil
 	})
+	_ = mongoRepository.UpdateFilesList(context.Background(), postID,[]uuid.UUID{fileID})
 
 	c.JSON(200, gin.H{"message": "success"})
 	return nil
@@ -862,8 +922,6 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 
 	for _, entry := range data {
 		for filename, fileType := range entry {
-			fmt.Println(fileType)
-			fmt.Println(filename)
 			fileTypeMap[filename] = fileType
 		}
 	}
