@@ -159,12 +159,16 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 			case "voice":
+				fmt.Println("trying to send voice")
 				file, err := s3.GetAudio(scheduledPost.Files[0].String())
 				if err != nil {
+					fmt.Println(err.Error())
 					continue
 				}
+
 				_,err = telegram.SendVoiceBytes(scheduledPost.BotToken,file, scheduledPost.Text,  scheduledPost.ChannelName, scheduledPost.Files[0].String())
 				if err != nil {
+					fmt.Println(err.Error())
 					continue
 				}
 				//err = repository.DeleteScheduledPostById(scheduledPost.ID)

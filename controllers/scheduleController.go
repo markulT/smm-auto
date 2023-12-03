@@ -448,7 +448,7 @@ func scheduleVoiceHandler(c *gin.Context) error {
 		}
 	}
 
-	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 UTC", scheduledTime[0])
+	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
 	file, err := files[0].Open()
 	defer file.Close()
 	if err != nil {
@@ -479,7 +479,7 @@ func scheduleVoiceHandler(c *gin.Context) error {
 		Text:        caption[0],
 		ChannelName: channel.Name,
 		Type:        "voice",
-		Files:       []uuid.UUID{postID},
+		Files:       []uuid.UUID{fileID},
 		Scheduled:   parsedTime,
 		DeviceToken: deviceToken[0],
 		BotToken: botToken[0],
