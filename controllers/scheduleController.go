@@ -845,14 +845,14 @@ func schedulePhotoHandler(c *gin.Context) error {
 
 		err = fileRepo.Save(ctx, &savedFile)
 
-		err = s3.LoadImage(context.Background(), postID.String(), &file)
+		err = s3.LoadImage(context.Background(), fileID.String(), &file)
 		if err != nil {
 			return nil, err
 		}
 
 		return nil, nil
 	})
-	_ = mongoRepository.UpdateFilesList(context.Background(), postID,[]uuid.UUID{fileID})
+	//_ = mongoRepository.UpdateFilesList(context.Background(), postID,[]uuid.UUID{fileID})
 
 	c.JSON(200, gin.H{"message": "success"})
 	return nil

@@ -99,7 +99,6 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				}
 				err = notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 				if err != nil {
-					fmt.Println(err.Error())
 					continue
 				}
 			case "mediaGroup":
@@ -152,12 +151,10 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				fmt.Println("Processing audio")
 				file, err := s3.GetAudio(scheduledPost.Files[0].String())
 				if err != nil {
-					fmt.Println(err.Error())
 					continue
 				}
 				_,err = telegram.SendAudioBytes(scheduledPost.BotToken,file, scheduledPost.Text,  scheduledPost.ChannelName, scheduledPost.Files[0].String())
 				if err != nil {
-					fmt.Println(err.Error())
 					continue
 				}
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
