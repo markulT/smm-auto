@@ -508,7 +508,7 @@ func scheduleVoiceHandler(c *gin.Context) error {
 			Status: 400,
 		}
 	}
-	err = s3.LoadAudio(postID.String(), &file)
+	err = s3.LoadAudio(fileID.String(), &file)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),

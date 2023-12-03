@@ -148,7 +148,6 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 			case "audio":
-				fmt.Println("Processing audio")
 				file, err := s3.GetAudio(scheduledPost.Files[0].String())
 				if err != nil {
 					continue
