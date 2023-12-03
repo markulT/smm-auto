@@ -583,7 +583,7 @@ func scheduleAudioHandler(c *gin.Context) error {
 		}
 	}
 
-	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 UTC", scheduledTime[0])
+	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
 	file, err := files[0].Open()
 	defer file.Close()
 	if err != nil {
