@@ -22,6 +22,7 @@ func SetupScheduleRoutes(r *gin.Engine) {
 
 	scheduleGroup.GET("/image/:imageName", jsonHelper.MakeHttpHandler(getPostImage))
 	scheduleGroup.GET("/video/:videoName", jsonHelper.MakeHttpHandler(getPostsVideo))
+	scheduleGroup.GET("/audio/:audioName", jsonHelper.MakeHttpHandler(getPostsAudio))
 
 	scheduleGroup.Use(auth.AuthMiddleware)
 
@@ -37,6 +38,32 @@ func SetupScheduleRoutes(r *gin.Engine) {
 	scheduleGroup.GET("/:id", jsonHelper.MakeHttpHandler(getPostHandler))
 	scheduleGroup.DELETE("/delete/:id", jsonHelper.MakeHttpHandler(deletePostHandler))
 	scheduleGroup.GET("/date/:scheduled", jsonHelper.MakeHttpHandler(getPostsByDate))
+}
+
+func getPostsAudio(c *gin.Context) error {
+	fileRepo := mongoRepository.NewFileRepo()
+	fileService := s3.NewFileService(fileRepo)
+	audioName, err := uuid.Parse(c.Param("audioName"))
+
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
+	}
+
+	//image, err := s3.GetVideo(videoName.String())
+	audio, err := fileService.GetFileByID(context.Background(), audioName)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+
+
+	c.DataFromReader(200, -1, "application/octet-stream", audio, nil)
+	return nil
 }
 
 // @Summary Get posts videos
@@ -71,12 +98,6 @@ func getPostsVideo(c *gin.Context) error {
 		}
 	}
 
-	if err != nil {
-		return jsonHelper.ApiError{
-			Err:    err.Error(),
-			Status: 500,
-		}
-	}
 	c.DataFromReader(200, -1, "application/octet-stream", image, nil)
 	return nil
 }
