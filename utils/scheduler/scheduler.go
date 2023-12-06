@@ -3,7 +3,6 @@ package scheduler
 import (
 	"context"
 	"firebase.google.com/go/messaging"
-	"fmt"
 	"go.mongodb.org/mongo-driver/bson"
 	"golearn/api/telegram"
 	"golearn/models"
@@ -114,7 +113,6 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 					}
 					fileModel, err := fileRepo.FindByID(context.Background(), fileID)
 					if err != nil {
-						fmt.Println(err)
 						continue
 					}
 					//
@@ -159,16 +157,13 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				err = repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				notificationService.SendNotification("Notification", "Scheduled message sent!", scheduledPost.DeviceToken)
 			case "voice":
-				fmt.Println("trying to send voice")
 				file, err := s3.GetAudio(scheduledPost.Files[0].String())
 				if err != nil {
-					fmt.Println(err.Error())
 					continue
 				}
 
 				_,err = telegram.SendVoiceBytes(scheduledPost.BotToken,file, scheduledPost.Text,  scheduledPost.ChannelName, scheduledPost.Files[0].String())
 				if err != nil {
-					fmt.Println(err.Error())
 					continue
 				}
 				//err = repository.DeleteScheduledPostById(scheduledPost.ID)

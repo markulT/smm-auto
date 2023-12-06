@@ -1,12 +1,15 @@
 package controllers
 
 import (
+	"context"
+	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v75"
 	"github.com/stripe/stripe-go/v75/paymentmethod"
 	"github.com/stripe/stripe-go/v75/price"
 	"github.com/stripe/stripe-go/v75/webhook"
+	"golearn/models"
 	"golearn/repository"
 	mongoRepository "golearn/repository"
 	"golearn/utils/auth"
@@ -32,7 +35,7 @@ func SetupPaymentRoutes(r *gin.Engine) {
 
 	webHookGroup := r.Group("/stripeWebhook")
 
-	webHookGroup.POST("/subscribe", subscriptionWebhookHandler)
+	webHookGroup.POST("/subscribe", jsonHelper.MakeHttpHandler(subscriptionWebhookHandler))
 	webHookGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(setupIntentWebhookHandler))
 }
 
@@ -99,8 +102,7 @@ func setupIntentWebhookHandler(c *gin.Context) error {
 	endpointSecret := os.Getenv("checkoutSessionCompletedSecret")
 
 	event, err := webhook.ConstructEvent(requestBody, c.GetHeader("Stripe-Signature"), endpointSecret)
-	fmt.Println(event)
-	fmt.Println(event.Type)
+
 	switch event.Type {
 	case "setup_intent.succeeded":
 		fmt.Println(event)
@@ -399,6 +401,66 @@ func getSubscriptionPlans(c *gin.Context) error {
 	return nil
 }
 
-func subscriptionWebhookHandler(c *gin.Context) {
+func subscriptionWebhookHandler(c *gin.Context) error {
+	var err error
+	//var body models.Subscription
+	//jsonHelper.BindWithException(&body, c)
+
+	paymentRepo := mongoRepository.NewPaymentRepo()
+
+	//err = paymentRepo.SaveSubscription(context.Background(), body)
+	//if err != nil {
+	//	return jsonHelper.ApiError{
+	//		Err:    "Error saving subscription",
+	//		Status: 500,
+	//	}
+	//}
+
+	requestBody, err := io.ReadAll(c.Request.Body)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
+	}
+	//endpointSecret := os.Getenv("subscriptionWebhookSecret")
+	fmt.Println(c.GetHeader("Stripe-Signature"))
+	event, err := webhook.ConstructEvent(requestBody, c.GetHeader("Stripe-Signature"), "whsec_OfBPfcD0lNo0PNqYdOQmOdrlsBcLD8Gt")
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 400,
+		}
+	}
+	jsonData, err := json.MarshalIndent(event.Data, "", "  ")
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Aboba",
+			Status: 500,
+		}
+	}
+	fmt.Println(string(jsonData))
+
+	switch event.Type {
+	case "customer.subscription.created":
+		// Then define and call a function to handle the event customer.subscription.created
+		fmt.Println(event)
+		subscription, err := models.NewSubscriptionFromEventData(event.Data)
+		if err != nil {
+			return jsonHelper.ApiError{
+				Err:    err.Error(),
+				Status: 500,
+			}
+		}
+		err = paymentRepo.SaveSubscription(context.Background(), *subscription)
+		//fmt.Println()
+	case "customer.subscription.deleted":
+		// Then define and call a function to handle the event customer.subscription.deleted
+	// ... handle other event types
+	default:
+		fmt.Fprintf(os.Stderr, "Unhandled event type: %s\n", event.Type)
+	}
+
 	c.String(200, "aboba")
+	return nil
 }

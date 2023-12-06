@@ -8,6 +8,7 @@ import (
 	"golearn/api/telegram"
 	"golearn/models"
 	mongoRepository "golearn/repository"
+	"golearn/utils/auth"
 	"golearn/utils/jsonHelper"
 	"io"
 	"os"
@@ -16,6 +17,9 @@ import (
 func SetupBotRoutes(r *gin.Engine) {
 	botGroup := r.Group("/bot")
 	//botGroup.GET("/getMe", getMeHandler)
+
+	botGroup.Use(auth.SubLevelMiddleware(1))
+
 	botGroup.POST("/sendMessage", jsonHelper.MakeHttpHandler(sendMessageHandler))
 	botGroup.POST("/sendPhoto", jsonHelper.MakeHttpHandler(sendPhotoHandler))
 	botGroup.POST("/sendMediaGroup", jsonHelper.MakeHttpHandler(sendMediaGroupHandler))

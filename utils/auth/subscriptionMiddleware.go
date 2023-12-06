@@ -47,6 +47,7 @@ func verifySubscriptionID(subID string) bool {
 
 func CheckSubLevel(email string, requiredSubLevel int) (bool, error) {
 	subLevel, err := repository.GetUserSubLevelbyEmail(email)
+	fmt.Println(subLevel)
 	if err != nil {
 		return false, err
 	}
@@ -64,9 +65,12 @@ func SubLevelMiddleware(requiredSubLevel int) gin.HandlerFunc {
 			c.Abort()
 			return
 		}
-		allowed, err := CheckSubLevel(fmt.Sprintf("%d", userEmail), requiredSubLevel)
+		allowed, err := CheckSubLevel(userEmail.(string), requiredSubLevel)
+		fmt.Println("nigga is allowed : ")
+		fmt.Println(allowed)
 		if err != nil {
-			c.JSON(500, gin.H{"error":"Internal server error"})
+
+			c.JSON(500, gin.H{"error":err.Error()})
 			c.Abort()
 			return
 		}

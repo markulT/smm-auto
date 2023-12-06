@@ -2,6 +2,7 @@ package repository
 
 import (
 	"context"
+	"fmt"
 	"github.com/google/uuid"
 	_ "github.com/lib/pq"
 	"go.mongodb.org/mongo-driver/bson"
@@ -147,14 +148,38 @@ func UpdateUserSubscriptionID(email, subscriptionType, subscriptionID string) er
 	return res.Err()
 }
 
+//func GetUserSubLevelbyEmail(email string) (int, error) {
+//	var usersCollection = utils.DB.Collection("users")
+//	var user *models.User
+//	res := usersCollection.FindOne(context.TODO(),bson.M{"email":email})
+//	res.Decode(user)
+//	if res.Err() !=nil {
+//		return 0, res.Err()
+//	}
+//	return user.SubscriptionType, nil
+//
+//}
+
 func GetUserSubLevelbyEmail(email string) (int, error) {
 	var usersCollection = utils.DB.Collection("users")
-	var user *models.User
-	res := usersCollection.FindOne(context.TODO(),bson.M{"email":email})
-	res.Decode(user)
-	if res.Err() !=nil {
-		return 0, res.Err()
-	}
-	return user.SubscriptionType, nil
+	var paymentCollection = utils.DB.Collection("payments")
 
+	user := &models.User{}
+	sub := &models.Subscription{}
+
+	fmt.Println(email)
+	res := usersCollection.FindOne(context.Background(),bson.M{"email":email})
+
+	err := res.Decode(user)
+	if err != nil {
+		fmt.Println("1")
+		return 0, err
+	}
+	res = paymentCollection.FindOne(context.Background(), bson.M{"customerId":user.CustomerID})
+	err = res.Decode(sub)
+	if err != nil {
+		fmt.Println("2")
+		return 0, err
+	}
+	return sub.SubLevel, nil
 }

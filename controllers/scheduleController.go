@@ -26,8 +26,7 @@ func SetupScheduleRoutes(r *gin.Engine) {
 
 	scheduleGroup.Use(auth.AuthMiddleware)
 
-	//scheduleGroup.Use(auth.SubscriptionMiddleware())
-	//scheduleGroup.Use(auth.SubLevelMiddleware(0))
+	scheduleGroup.Use(auth.SubLevelMiddleware(1))
 	scheduleGroup.POST("/message", jsonHelper.MakeHttpHandler(scheduleMessageHandler))
 	scheduleGroup.POST("/photo", jsonHelper.MakeHttpHandler(schedulePhotoHandler))
 	scheduleGroup.POST("/mediaGroup", jsonHelper.MakeHttpHandler(scheduleMediaGroupHandler))
@@ -697,7 +696,7 @@ type ScheduleMessageRequest struct {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/audio [post]
 func scheduleMessageHandler(c *gin.Context) error {
-
+	fmt.Println("3")
 	postRepo := mongoRepository.NewPostRepository()
 
 	var body ScheduleMessageRequest
