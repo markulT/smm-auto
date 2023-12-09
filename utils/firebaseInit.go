@@ -18,7 +18,7 @@ import (
 
 func FirebaseInit() (*firebase.App, error) {
 	// Read the contents of the JSON file
-	opt:= option.WithCredentialsFile("public/smm-auto-firebase-adminsdk-80m2e-b3964f7528.json")
+	opt:= option.WithCredentialsFile("public/push_notifications_smm_auto_firebase_adminsdk_awm0t_f66565860c.json")
 	//opts := []option.ClientOption{option.WithCredentialsJSON([]byte(`{"apiKey":"AIzaSyDn5tALtyUVfxy4IVmGiL77-w47ewsh604", "projectId": "smm-auto"}`))}
 
 	app, err := firebase.NewApp(context.Background(), nil, opt)

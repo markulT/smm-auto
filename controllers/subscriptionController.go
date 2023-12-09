@@ -8,6 +8,7 @@ import (
 	"github.com/stripe/stripe-go/v75"
 	"github.com/stripe/stripe-go/v75/paymentmethod"
 	"github.com/stripe/stripe-go/v75/price"
+	"github.com/stripe/stripe-go/v75/product"
 	"github.com/stripe/stripe-go/v75/webhook"
 	"golearn/models"
 	"golearn/repository"
@@ -21,7 +22,7 @@ import (
 
 func SetupPaymentRoutes(r *gin.Engine) {
 	paymentGroup := r.Group("/payment")
-	paymentGroup.GET("/plans/", jsonHelper.MakeHttpHandler(getSubPlans))
+	paymentGroup.GET("/subscriptions/plans", jsonHelper.MakeHttpHandler(getSubscriptionPlans))
 	paymentGroup.Use(auth.AuthMiddleware)
 	//paymentGroup.Use(payments.PaymentMiddleware)
 	//paymentGroup.POST("/intent", jsonHelper.MakeHttpHandler(createIntentHandler))
@@ -31,7 +32,6 @@ func SetupPaymentRoutes(r *gin.Engine) {
 	paymentGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(initSetupIntentHandler))
 	paymentGroup.POST("/setupIntent/create", jsonHelper.MakeHttpHandler(createSetupIntent))
 	paymentGroup.GET("/paymentMethod/getAll", jsonHelper.MakeHttpHandler(paymentMethodsHandler))
-	paymentGroup.GET("/subscriptions/plans", jsonHelper.MakeHttpHandler(getSubscriptionPlans))
 
 	webHookGroup := r.Group("/stripeWebhook")
 
@@ -186,24 +186,6 @@ func initSetupIntentHandler(c *gin.Context) error {
 
 type GetSubPlansResponse struct {
 	Plans []*stripe.Plan `json:"plans"`
-}
-
-// @Summary Get subscription plans
-// @Tags payments
-// @Description Get all available subscription plans
-// @ID GetSubPlans
-// @Accept json
-// @Produce json
-// @Success 200 {string} string "Returns array of subscription plans (subscription type can be checked here : https://stripe.com/docs/api/plans)"
-// @Failure 500 {object} jsonHelper.ApiError
-// @Failure default {object} jsonHelper.ApiError
-// @Router /payments/plans [get]
-func getSubPlans(c *gin.Context) error {
-
-	paymentsService := payments.NewStripePaymentService()
-	planList := paymentsService.GetSubPlans()
-	c.JSON(200, gin.H{"plans": planList})
-	return nil
 }
 
 type AddPaymentMethodRequest struct {
@@ -385,15 +367,16 @@ func paymentMethodsHandler(c *gin.Context) error {
 }
 
 func getSubscriptionPlans(c *gin.Context) error {
-	var prices []stripe.Price
+	var prices []stripe.Product
 
-	params := &stripe.PriceListParams{}
+	params := &stripe.ProductListParams{}
 
-	params.Filters.AddFilter("", "", "")
-
-	i := price.List(params)
+	i:=product.List(params)
 	for i.Next() {
-		p := i.Price()
+		p := i.Product()
+		priceParams := &stripe.PriceParams{}
+		fullPrice, _ := price.Get(i.Product().DefaultPrice.ID, priceParams)
+		p.DefaultPrice = fullPrice
 		prices = append(prices, *p)
 	}
 

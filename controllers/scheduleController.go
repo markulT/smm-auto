@@ -23,6 +23,10 @@ func SetupScheduleRoutes(r *gin.Engine) {
 	scheduleGroup.GET("/image/:imageName", jsonHelper.MakeHttpHandler(getPostImage))
 	scheduleGroup.GET("/video/:videoName", jsonHelper.MakeHttpHandler(getPostsVideo))
 	scheduleGroup.GET("/audio/:audioName", jsonHelper.MakeHttpHandler(getPostsAudio))
+	scheduleGroup.GET("/", jsonHelper.MakeHttpHandler(getScheduledPostHandler))
+	scheduleGroup.GET("/:id", jsonHelper.MakeHttpHandler(getPostHandler))
+	scheduleGroup.DELETE("/delete/:id", jsonHelper.MakeHttpHandler(deletePostHandler))
+	scheduleGroup.GET("/date/:scheduled", jsonHelper.MakeHttpHandler(getPostsByDate))
 
 	scheduleGroup.Use(auth.AuthMiddleware)
 
@@ -33,10 +37,7 @@ func SetupScheduleRoutes(r *gin.Engine) {
 	scheduleGroup.POST("/video", jsonHelper.MakeHttpHandler(scheduleVideoHandler))
 	scheduleGroup.POST("/audio", jsonHelper.MakeHttpHandler(scheduleAudioHandler))
 	scheduleGroup.POST("/voice", jsonHelper.MakeHttpHandler(scheduleVoiceHandler))
-	scheduleGroup.GET("/", jsonHelper.MakeHttpHandler(getScheduledPostHandler))
-	scheduleGroup.GET("/:id", jsonHelper.MakeHttpHandler(getPostHandler))
-	scheduleGroup.DELETE("/delete/:id", jsonHelper.MakeHttpHandler(deletePostHandler))
-	scheduleGroup.GET("/date/:scheduled", jsonHelper.MakeHttpHandler(getPostsByDate))
+
 }
 
 func getPostsAudio(c *gin.Context) error {
