@@ -2,7 +2,6 @@ package controllers
 
 import (
 	"context"
-	"encoding/json"
 	"fmt"
 	"github.com/gin-gonic/gin"
 	"github.com/stripe/stripe-go/v75"
@@ -11,7 +10,6 @@ import (
 	"github.com/stripe/stripe-go/v75/product"
 	"github.com/stripe/stripe-go/v75/webhook"
 	"golearn/models"
-	"golearn/repository"
 	mongoRepository "golearn/repository"
 	"golearn/utils/auth"
 	"golearn/utils/jsonHelper"
@@ -32,6 +30,7 @@ func SetupPaymentRoutes(r *gin.Engine) {
 	paymentGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(initSetupIntentHandler))
 	paymentGroup.POST("/setupIntent/create", jsonHelper.MakeHttpHandler(createSetupIntent))
 	paymentGroup.GET("/paymentMethod/getAll", jsonHelper.MakeHttpHandler(paymentMethodsHandler))
+	paymentGroup.POST("/subscription/create")
 
 	webHookGroup := r.Group("/stripeWebhook")
 
@@ -41,8 +40,6 @@ func SetupPaymentRoutes(r *gin.Engine) {
 
 type CreateSetupIntentRequest struct{}
 type CreateSetupIntentResponse struct {
-	SetupClientSecret string `json:"setupClientSecret"`
-	CustomerID        string `json:"customerID"`
 }
 
 func createSetupIntent(c *gin.Context) error {
@@ -256,7 +253,7 @@ func addPaymentMethodHandler(c *gin.Context) error {
 }
 
 type CreateSubscriptionRequest struct {
-	SubscriptionType string `json:"subscriptionType"`
+	PriceID string `json:"priceId"`
 }
 
 // @Summary Create subscription
@@ -273,7 +270,7 @@ type CreateSubscriptionRequest struct {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /payments/subscription [post]
 func subscriptionСreationHandler(c *gin.Context) error {
-
+	paymentRepo := mongoRepository.NewPaymentRepo()
 	paymentsService := payments.NewStripePaymentService()
 
 	var body CreateSubscriptionRequest
@@ -297,15 +294,23 @@ func subscriptionСreationHandler(c *gin.Context) error {
 		}
 	}
 
-	subscriptionID, err := paymentsService.CreateSubscription(user.CustomerID, body.SubscriptionType)
+	subscription, err := paymentsService.CreateSubscription(user.CustomerID, body.PriceID)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    "Internal server error : " + err.Error(),
 			Status: 500,
 		}
 	}
+	subModel, err := models.NewSubscriptionFromStripe(subscription)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
 
-	err = repository.UpdateUserSubscriptionID(fmt.Sprintf("%d", userEmail), body.SubscriptionType, subscriptionID)
+	fmt.Println(subModel)
+	err = paymentRepo.SaveSubscription(context.Background(), *subModel)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    "Internal server error : " + err.Error(),
@@ -406,8 +411,6 @@ func subscriptionWebhookHandler(c *gin.Context) error {
 			Status: 400,
 		}
 	}
-	//endpointSecret := os.Getenv("subscriptionWebhookSecret")
-	fmt.Println(c.GetHeader("Stripe-Signature"))
 	event, err := webhook.ConstructEvent(requestBody, c.GetHeader("Stripe-Signature"), "whsec_OfBPfcD0lNo0PNqYdOQmOdrlsBcLD8Gt")
 	if err != nil {
 		return jsonHelper.ApiError{
@@ -415,19 +418,17 @@ func subscriptionWebhookHandler(c *gin.Context) error {
 			Status: 400,
 		}
 	}
-	jsonData, err := json.MarshalIndent(event.Data, "", "  ")
-	if err != nil {
-		return jsonHelper.ApiError{
-			Err:    "Aboba",
-			Status: 500,
-		}
-	}
-	fmt.Println(string(jsonData))
+	//jsonData, err := json.MarshalIndent(event.Data, "", "  ")
+	//if err != nil {
+	//	return jsonHelper.ApiError{
+	//		Err:    "Aboba",
+	//		Status: 500,
+	//	}
+	//}
 
 	switch event.Type {
 	case "customer.subscription.created":
 		// Then define and call a function to handle the event customer.subscription.created
-		fmt.Println(event)
 		subscription, err := models.NewSubscriptionFromEventData(event.Data)
 		if err != nil {
 			return jsonHelper.ApiError{

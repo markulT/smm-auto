@@ -3,6 +3,7 @@ package models
 import (
 	"fmt"
 	"github.com/stripe/stripe-go/v75"
+	"github.com/stripe/stripe-go/v75/price"
 	"github.com/stripe/stripe-go/v75/product"
 	"os"
 )
@@ -32,6 +33,23 @@ func NewSubscriptionFromEventData(e *stripe.EventData) (*Subscription,error) {
 	return &s, nil
 }
 
+func NewSubscriptionFromStripe(s *stripe.Subscription) (*Subscription, error) {
+	var err error
+
+	p, err := getProductByPriceID(s.Items.Data[0].Price.ID)
+	if err != nil {
+		return nil, err
+	}
+
+	subLevel, err := getSubLevelFromProductID(p.ID)
+	if err != nil {
+		return nil, err
+	}
+	subModel := Subscription{ID: s.ID, SubLevel: subLevel, CustomerID: s.Customer.ID}
+
+	return &subModel, nil
+}
+
 func getProductIDFromEventData(e *stripe.EventData) (string, error) {
 	obj, ok := e.Object["items"].(map[string]interface{})
 	if !ok {
@@ -44,6 +62,14 @@ func getProductIDFromEventData(e *stripe.EventData) (string, error) {
 	}
 	fmt.Println(prodID)
 	return prodID, nil
+}
+
+func getProductByPriceID(priceID string) (*stripe.Product, error) {
+	p, err := price.Get(priceID, nil)
+	if err != nil {
+		return nil, err
+	}
+	return p.Product, nil
 }
 
 func getSubLevelFromProductID(prodID string) (int, error) {

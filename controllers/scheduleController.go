@@ -30,7 +30,7 @@ func SetupScheduleRoutes(r *gin.Engine) {
 
 	scheduleGroup.Use(auth.AuthMiddleware)
 
-	scheduleGroup.Use(auth.SubLevelMiddleware(1))
+	//scheduleGroup.Use(auth.SubLevelMiddleware(1))
 	scheduleGroup.POST("/message", jsonHelper.MakeHttpHandler(scheduleMessageHandler))
 	scheduleGroup.POST("/photo", jsonHelper.MakeHttpHandler(schedulePhotoHandler))
 	scheduleGroup.POST("/mediaGroup", jsonHelper.MakeHttpHandler(scheduleMediaGroupHandler))

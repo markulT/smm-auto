@@ -14,8 +14,8 @@ import (
 type PaymentService interface {
 	CreateCustomer(string) (string, error)
 	CustomerExists(string) (bool, error)
-	CreateSubscription(email string, subscriptionID string) (subID string, err error)
 	AddPaymentMethod(cd CardData) (*stripe.PaymentMethod, error)
+	CreateSubscription(customerID string, priceID string) (*stripe.Subscription, error)
 	AttachPaymentMethodToCustomer(pmid string, customerID string) error
 	GetSubPlans() []*stripe.Plan
 	InitSetupIntent(cid string, paymentMethodType string) error
@@ -29,6 +29,19 @@ type stripePaymentService struct {
 
 func NewStripePaymentService() PaymentService {
 	return &stripePaymentService{}
+}
+
+func (s *stripePaymentService) CreateSubscription(customerID string, priceID string) (*stripe.Subscription, error) {
+	params := &stripe.SubscriptionParams{
+		Customer: stripe.String(customerID),
+		Items: []*stripe.SubscriptionItemsParams{
+			&stripe.SubscriptionItemsParams{
+				Price: stripe.String(priceID),
+			},
+		},
+	}
+	result, err := subscription.New(params)
+	return result, err
 }
 
 func (s *stripePaymentService) GetCustomerByID(cid string) (*stripe.Customer, error) {
@@ -124,22 +137,7 @@ func (s *stripePaymentService) AddPaymentMethod(cd CardData) (*stripe.PaymentMet
 
 }
 
-func (s *stripePaymentService) CreateSubscription(customerID string, subscriptionID string) (stripeSubscriptionID string, err error) {
-	if err := checkIfPlanExists(subscriptionID); !err {
-		return "", SubscriptionDoesNotExistException{}
-	}
-	params := &stripe.SubscriptionParams{
-		Customer:          stripe.String(customerID),
-		Items:             []*stripe.SubscriptionItemsParams{{Price: stripe.String(subscriptionID)}},
-		ProrationBehavior: stripe.String("always_invoice"),
-	}
 
-	subscriptionInfo, err := subscription.New(params)
-	if err != nil {
-		return "", err
-	}
-	return subscriptionInfo.ID, nil
-}
 
 func (s *stripePaymentService) CreateCustomer(email string) (string, error) {
 	params := &stripe.CustomerParams{
