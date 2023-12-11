@@ -60,17 +60,15 @@ func (s *stripePaymentService) CustomerSubscribed(cID string) bool {
 
 func (s *stripePaymentService) GetDefaultPaymentMethod(cID string) (string, error) {
 	a := "invoice_settings.default_payment_method"
-	fmt.Println("aboba 0")
+
 	params := &stripe.CustomerParams{
 		Expand: []*string{&a},
 	}
-	fmt.Println("aboba")
+
 	c, err := customer.Get(cID, params)
 	if err != nil {
 		return "", err
 	}
-	fmt.Println(cID)
-	fmt.Println(c.InvoiceSettings.DefaultPaymentMethod)
 	return c.InvoiceSettings.DefaultPaymentMethod.ID, nil
 }
 
@@ -78,11 +76,11 @@ func (s *stripePaymentService) SetDefaultPaymentMethod(cID string,pmID string) e
 
 	params := &stripe.CustomerParams{
 		InvoiceSettings: &stripe.CustomerInvoiceSettingsParams{
-			DefaultPaymentMethod: stripe.String("pm_12345"),
+			DefaultPaymentMethod: stripe.String(pmID),
 		},
 	}
 
-	_, err := customer.Update("cus_12345", params)
+	_, err := customer.Update(cID, params)
 	return err
 }
 
