@@ -12,6 +12,7 @@ type Subscription struct {
 	ID string `bson:"_id" json:"id"`
 	SubLevel int `bson:"subLevel" json:"subLevel"`
 	CustomerID string `json:"customerId" bson:"customerId"`
+	CurrentPeriodEnd int `json:"currentPeriodEnd" bson:"currentPeriodEnd,omitempty"`
 }
 
 func NewSubscriptionFromEventData(e *stripe.EventData) (*Subscription,error) {
@@ -45,7 +46,7 @@ func NewSubscriptionFromStripe(s *stripe.Subscription) (*Subscription, error) {
 	if err != nil {
 		return nil, err
 	}
-	subModel := Subscription{ID: s.ID, SubLevel: subLevel, CustomerID: s.Customer.ID}
+	subModel := Subscription{ID: s.ID, SubLevel: subLevel, CustomerID: s.Customer.ID, CurrentPeriodEnd: int(s.CurrentPeriodEnd)}
 
 	return &subModel, nil
 }

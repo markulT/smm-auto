@@ -23,14 +23,15 @@ func SetupScheduleRoutes(r *gin.Engine) {
 	scheduleGroup.GET("/image/:imageName", jsonHelper.MakeHttpHandler(getPostImage))
 	scheduleGroup.GET("/video/:videoName", jsonHelper.MakeHttpHandler(getPostsVideo))
 	scheduleGroup.GET("/audio/:audioName", jsonHelper.MakeHttpHandler(getPostsAudio))
+
+
+	scheduleGroup.Use(auth.AuthMiddleware)
 	scheduleGroup.GET("/", jsonHelper.MakeHttpHandler(getScheduledPostHandler))
 	scheduleGroup.GET("/:id", jsonHelper.MakeHttpHandler(getPostHandler))
 	scheduleGroup.DELETE("/delete/:id", jsonHelper.MakeHttpHandler(deletePostHandler))
 	scheduleGroup.GET("/date/:scheduled", jsonHelper.MakeHttpHandler(getPostsByDate))
 
-	scheduleGroup.Use(auth.AuthMiddleware)
-
-	//scheduleGroup.Use(auth.SubLevelMiddleware(1))
+	scheduleGroup.Use(auth.SubLevelMiddleware(1))
 	scheduleGroup.POST("/message", jsonHelper.MakeHttpHandler(scheduleMessageHandler))
 	scheduleGroup.POST("/photo", jsonHelper.MakeHttpHandler(schedulePhotoHandler))
 	scheduleGroup.POST("/mediaGroup", jsonHelper.MakeHttpHandler(scheduleMediaGroupHandler))

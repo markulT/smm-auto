@@ -1,6 +1,7 @@
 package payments
 
 import (
+	"context"
 	"fmt"
 	"github.com/stripe/stripe-go/v75"
 	"github.com/stripe/stripe-go/v75/checkout/session"
@@ -9,9 +10,11 @@ import (
 	"github.com/stripe/stripe-go/v75/plan"
 	"github.com/stripe/stripe-go/v75/setupintent"
 	"github.com/stripe/stripe-go/v75/subscription"
+	"golearn/models"
 )
 
 type PaymentService interface {
+	GetSubscriptionByCustomerID(cid string) ([]*models.Subscription,error)
 	CreateCustomer(string) (string, error)
 	CustomerExists(string) (bool, error)
 	AddPaymentMethod(cd CardData) (*stripe.PaymentMethod, error)
@@ -22,13 +25,106 @@ type PaymentService interface {
 	GetSetupIntent(setid string) (*stripe.SetupIntent, error)
 	CreateSetupIntent(cid string) (*stripe.SetupIntent, error)
 	GetCustomerByID(cid string) (*stripe.Customer, error)
+	DeleteSubscriptionByCustomerID(cid string) error
+
+	SetDefaultPaymentMethod(cID string,pmID string) error
+	GetDefaultPaymentMethod(cID string) (string, error)
+
+	CustomerSubscribed(cID string) bool
+}
+
+type PaymentRepo interface {
+	DeleteSubscriptionByID(c context.Context, subID string) error
+	FindSubscriptionByCustomerID(c context.Context, cID string) (*models.Subscription , error)
 }
 
 type stripePaymentService struct {
+	paymentRepo PaymentRepo
 }
 
-func NewStripePaymentService() PaymentService {
-	return &stripePaymentService{}
+func NewStripePaymentService(pr PaymentRepo) PaymentService {
+	return &stripePaymentService{paymentRepo: pr}
+}
+
+func (s *stripePaymentService) CustomerSubscribed(cID string) bool {
+
+	subFromDB, _ := s.paymentRepo.FindSubscriptionByCustomerID(context.Background(),cID)
+
+	subFromStripe, _ := s.GetSubscriptionByCustomerID(cID)
+
+	if subFromDB != nil || subFromStripe != nil {
+		return true
+	}
+	return false
+}
+
+func (s *stripePaymentService) GetDefaultPaymentMethod(cID string) (string, error) {
+	a := "invoice_settings.default_payment_method"
+	fmt.Println("aboba 0")
+	params := &stripe.CustomerParams{
+		Expand: []*string{&a},
+	}
+	fmt.Println("aboba")
+	c, err := customer.Get(cID, params)
+	if err != nil {
+		return "", err
+	}
+	fmt.Println(cID)
+	fmt.Println(c.InvoiceSettings.DefaultPaymentMethod)
+	return c.InvoiceSettings.DefaultPaymentMethod.ID, nil
+}
+
+func (s *stripePaymentService) SetDefaultPaymentMethod(cID string,pmID string) error {
+
+	params := &stripe.CustomerParams{
+		InvoiceSettings: &stripe.CustomerInvoiceSettingsParams{
+			DefaultPaymentMethod: stripe.String("pm_12345"),
+		},
+	}
+
+	_, err := customer.Update("cus_12345", params)
+	return err
+}
+
+func (s *stripePaymentService) GetSubscriptionByCustomerID(cid string) ([]*models.Subscription,error) {
+	var subList []*models.Subscription
+
+	params := &stripe.SubscriptionListParams{
+		Customer: stripe.String(cid),
+	}
+	i := subscription.List(params)
+	for i.Next() {
+		sub := i.Subscription()
+		subModel, err := models.NewSubscriptionFromStripe(sub)
+		if err != nil {
+			return subList,err
+		}
+		subList = append(subList, subModel)
+
+	}
+	return subList,nil
+}
+
+func (s *stripePaymentService) DeleteSubscriptionByCustomerID(cid string) (error) {
+	params := &stripe.SubscriptionListParams{
+		Customer: stripe.String(cid),
+	}
+	i := subscription.List(params)
+	for i.Next() {
+		sub := i.Subscription()
+
+		params := &stripe.SubscriptionCancelParams{}
+		_, err := subscription.Cancel(sub.ID, params)
+		if err != nil {
+			return err
+		}
+		err = s.paymentRepo.DeleteSubscriptionByID(context.Background(),sub.ID)
+		if err != nil {
+			return err
+		}
+	}
+
+	return nil
 }
 
 func (s *stripePaymentService) CreateSubscription(customerID string, priceID string) (*stripe.Subscription, error) {

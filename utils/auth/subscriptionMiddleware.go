@@ -1,7 +1,6 @@
 package auth
 
 import (
-	"fmt"
 	"github.com/gin-gonic/gin"
 	"golearn/repository"
 	"strings"
@@ -47,7 +46,7 @@ func verifySubscriptionID(subID string) bool {
 
 func CheckSubLevel(email string, requiredSubLevel int) (bool, error) {
 	subLevel, err := repository.GetUserSubLevelbyEmail(email)
-	fmt.Println(subLevel)
+
 	if err != nil {
 		return false, err
 	}
@@ -66,8 +65,6 @@ func SubLevelMiddleware(requiredSubLevel int) gin.HandlerFunc {
 			return
 		}
 		allowed, err := CheckSubLevel(userEmail.(string), requiredSubLevel)
-		fmt.Println("nigga is allowed : ")
-		fmt.Println(allowed)
 		if err != nil {
 
 			c.JSON(500, gin.H{"error":err.Error()})

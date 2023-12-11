@@ -272,7 +272,8 @@ func signup(c *gin.Context) error {
 			Status: 500,
 		}
 	}
-	stripeService := payments.NewStripePaymentService()
+	paymentRepo := mongoRepository.NewPaymentRepo()
+	stripeService := payments.NewStripePaymentService(paymentRepo)
 	customerID, err := stripeService.CreateCustomer(body.Email)
 	if err != nil {
 		return jsonHelper.ApiError{

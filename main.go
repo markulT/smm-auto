@@ -9,8 +9,10 @@ import (
 	ginSwagger "github.com/swaggo/gin-swagger"
 	"golearn/controllers"
 	_ "golearn/docs"
+	"golearn/repository"
 	"golearn/utils"
 	"golearn/utils/archiveCleaner"
+	"golearn/utils/payments"
 	"golearn/utils/s3"
 	"golearn/utils/scheduler"
 	"os"
@@ -62,10 +64,13 @@ func main() {
 
 	r := gin.Default()
 
+	paymentRepo:=repository.NewPaymentRepo()
+	paymentService:=payments.NewStripePaymentService(paymentRepo)
+
 	controllers.SetupAuthRoutes(r)
 	controllers.SetupBotRoutes(r)
 	controllers.SetupScheduleRoutes(r)
-	controllers.SetupPaymentRoutes(r)
+	controllers.SetupPaymentRoutes(r, paymentService, paymentRepo)
 	controllers.SetupArchiveRoutes(r)
 	controllers.SetupChannelRoutes(r)
 

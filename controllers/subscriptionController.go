@@ -18,19 +18,30 @@ import (
 	"os"
 )
 
-func SetupPaymentRoutes(r *gin.Engine) {
+type subscriptionController struct {
+	paymentService payments.PaymentService
+	paymentRepo mongoRepository.PaymentRepo
+}
+
+func SetupPaymentRoutes(r *gin.Engine, ps payments.PaymentService, pr mongoRepository.PaymentRepo) {
+	//paymentRepo := mongoRepository.NewPaymentRepo()
+	//paymentService := payments.NewStripePaymentService(paymentRepo)
+	sc := subscriptionController{paymentService: ps, paymentRepo: pr}
 	paymentGroup := r.Group("/payment")
-	paymentGroup.GET("/subscriptions/plans", jsonHelper.MakeHttpHandler(getSubscriptionPlans))
+	paymentGroup.GET("/subscriptions/plans", jsonHelper.MakeHttpHandler(sc.getSubscriptionPlans))
 	paymentGroup.Use(auth.AuthMiddleware)
 	//paymentGroup.Use(payments.PaymentMiddleware)
 	//paymentGroup.POST("/intent", jsonHelper.MakeHttpHandler(createIntentHandler))
-	paymentGroup.POST("/subscription", jsonHelper.MakeHttpHandler(subscriptionСreationHandler))
-	paymentGroup.GET("/customerExists", customerExistsHandler)
-	paymentGroup.POST("/paymentMethod/add", jsonHelper.MakeHttpHandler(addPaymentMethodHandler))
+	paymentGroup.GET("/subscription", jsonHelper.MakeHttpHandler(sc.getSubscriptionInfo))
+	paymentGroup.POST("/subscription", jsonHelper.MakeHttpHandler(sc.subscriptionСreationHandler))
+	paymentGroup.POST("/paymentMethod/setDefault", jsonHelper.MakeHttpHandler(sc.setDefaultPaymentMethod))
+	paymentGroup.DELETE("/subscription/cancel", jsonHelper.MakeHttpHandler(sc.deleteSubscription))
+	paymentGroup.GET("/customerExists", sc.customerExistsHandler)
+	paymentGroup.POST("/paymentMethod/add", jsonHelper.MakeHttpHandler(sc.addPaymentMethodHandler))
 	paymentGroup.POST("/setupIntent", jsonHelper.MakeHttpHandler(initSetupIntentHandler))
-	paymentGroup.POST("/setupIntent/create", jsonHelper.MakeHttpHandler(createSetupIntent))
-	paymentGroup.GET("/paymentMethod/getAll", jsonHelper.MakeHttpHandler(paymentMethodsHandler))
-	paymentGroup.POST("/subscription/create")
+	paymentGroup.POST("/setupIntent/create", jsonHelper.MakeHttpHandler(sc.createSetupIntent))
+	paymentGroup.GET("/paymentMethod/getAll", jsonHelper.MakeHttpHandler(sc.paymentMethodsHandler))
+	paymentGroup.GET("/paymentMethod/getDefault", jsonHelper.MakeHttpHandler(sc.getDefaultPaymentMethod))
 
 	webHookGroup := r.Group("/stripeWebhook")
 
@@ -42,9 +53,125 @@ type CreateSetupIntentRequest struct{}
 type CreateSetupIntentResponse struct {
 }
 
-func createSetupIntent(c *gin.Context) error {
+type SetDefaultPaymentMethodRequest struct {
+	PaymentMethodID string `json:"paymentMethodId"`
+}
 
-	paymentsService := payments.NewStripePaymentService()
+func (sc *subscriptionController) getDefaultPaymentMethod(c *gin.Context) error {
+
+	var err error
+
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
+
+	paymentMethodID, err := sc.paymentService.GetDefaultPaymentMethod(user.CustomerID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+
+	c.JSON(200, gin.H{"paymentMethodId":paymentMethodID})
+	return nil
+}
+
+func (sc *subscriptionController) setDefaultPaymentMethod(c *gin.Context) error {
+	var err error
+	var body SetDefaultPaymentMethodRequest
+	jsonHelper.BindWithException(&body, c)
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
+
+	err = sc.paymentService.SetDefaultPaymentMethod(user.CustomerID, body.PaymentMethodID)
+	c.JSON(200, gin.H{})
+	return nil
+}
+
+func (sc *subscriptionController) getSubscriptionInfo(c *gin.Context)  error {
+
+	fmt.Println("nigga")
+
+	var err error
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
+
+	sub,err := sc.paymentService.GetSubscriptionByCustomerID(user.CustomerID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+	c.JSON(200, gin.H{"subscriptions":sub})
+	return nil
+}
+
+func (sc *subscriptionController) deleteSubscription(c *gin.Context) error {
+	var err error
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
+
+	err = sc.paymentService.DeleteSubscriptionByCustomerID(user.CustomerID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+	c.JSON(200, gin.H{})
+	return nil
+}
+
+func (sc *subscriptionController) createSetupIntent(c *gin.Context) error {
 
 	var body CreateSetupIntentRequest
 	jsonHelper.BindWithException(&body, c)
@@ -64,14 +191,14 @@ func createSetupIntent(c *gin.Context) error {
 		}
 	}
 
-	si, err := paymentsService.CreateSetupIntent(user.CustomerID)
+	si, err := sc.paymentService.CreateSetupIntent(user.CustomerID)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
 			Status: 500,
 		}
 	}
-	customer, err := paymentsService.GetCustomerByID(user.CustomerID)
+	customer, err := sc.paymentService.GetCustomerByID(user.CustomerID)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -86,8 +213,8 @@ func createSetupIntent(c *gin.Context) error {
 }
 
 func setupIntentWebhookHandler(c *gin.Context) error {
-
-	paymentsService := payments.NewStripePaymentService()
+	paymentRepo := mongoRepository.NewPaymentRepo()
+	paymentsService := payments.NewStripePaymentService(paymentRepo)
 
 	requestBody, err := io.ReadAll(c.Request.Body)
 	if err != nil {
@@ -150,8 +277,8 @@ type InitSetupIntentResponse struct {
 }
 
 func initSetupIntentHandler(c *gin.Context) error {
-
-	paymentService := payments.NewStripePaymentService()
+	paymentRepo := mongoRepository.NewPaymentRepo()
+	paymentService := payments.NewStripePaymentService(paymentRepo)
 
 	var body InitSetupIntentRequest
 	jsonHelper.BindWithException(&body, c)
@@ -205,9 +332,7 @@ type AddPaymentMethodRequest struct {
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /payments/paymentMethod/add [post]
-func addPaymentMethodHandler(c *gin.Context) error {
-
-	paymentsService := payments.NewStripePaymentService()
+func (sc *subscriptionController) addPaymentMethodHandler(c *gin.Context) error {
 
 	var body AddPaymentMethodRequest
 
@@ -229,7 +354,7 @@ func addPaymentMethodHandler(c *gin.Context) error {
 			Status: 500,
 		}
 	}
-	pm, err := paymentsService.AddPaymentMethod(payments.CardData{
+	pm, err := sc.paymentService.AddPaymentMethod(payments.CardData{
 		CardNumber: body.CardNumber,
 		ExpMonth:   body.ExpMonth,
 		ExpYear:    body.ExpYear,
@@ -241,7 +366,7 @@ func addPaymentMethodHandler(c *gin.Context) error {
 			Status: 500,
 		}
 	}
-	err = paymentsService.AttachPaymentMethodToCustomer(pm.ID, user.CustomerID)
+	err = sc.paymentService.AttachPaymentMethodToCustomer(pm.ID, user.CustomerID)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    err.Error(),
@@ -269,9 +394,7 @@ type CreateSubscriptionRequest struct {
 // @Failure 500 {object} jsonHelper.ApiError
 // @Failure default {object} jsonHelper.ApiError
 // @Router /payments/subscription [post]
-func subscriptionСreationHandler(c *gin.Context) error {
-	paymentRepo := mongoRepository.NewPaymentRepo()
-	paymentsService := payments.NewStripePaymentService()
+func (sc *subscriptionController) subscriptionСreationHandler(c *gin.Context) error {
 
 	var body CreateSubscriptionRequest
 
@@ -282,7 +405,7 @@ func subscriptionСreationHandler(c *gin.Context) error {
 	if !exists {
 		return jsonHelper.ApiError{
 			Err:    "User unauthenticated",
-			Status: 400,
+			Status: 417,
 		}
 	}
 
@@ -294,7 +417,15 @@ func subscriptionСreationHandler(c *gin.Context) error {
 		}
 	}
 
-	subscription, err := paymentsService.CreateSubscription(user.CustomerID, body.PriceID)
+	subExists := sc.paymentService.CustomerSubscribed(user.CustomerID)
+	if subExists {
+		return jsonHelper.ApiError{
+			Err:    "User already subscribed",
+			Status: 400,
+		}
+	}
+
+	subscription, err := sc.paymentService.CreateSubscription(user.CustomerID, body.PriceID)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    "Internal server error : " + err.Error(),
@@ -310,7 +441,7 @@ func subscriptionСreationHandler(c *gin.Context) error {
 	}
 
 	fmt.Println(subModel)
-	err = paymentRepo.SaveSubscription(context.Background(), *subModel)
+	err = sc.paymentRepo.SaveSubscription(context.Background(), *subModel)
 	if err != nil {
 		return jsonHelper.ApiError{
 			Err:    "Internal server error : " + err.Error(),
@@ -322,15 +453,14 @@ func subscriptionСreationHandler(c *gin.Context) error {
 	return nil
 }
 
-func customerExistsHandler(c *gin.Context) {
+func (sc *subscriptionController) customerExistsHandler(c *gin.Context) {
 	userEmail, exists := c.Get("userEmail")
 	if !exists {
 		c.JSON(403, gin.H{"error": "Invalid token"})
 		c.Abort()
 		return
 	}
-	stripeService := payments.NewStripePaymentService()
-	customerExists, _ := stripeService.CustomerExists(fmt.Sprintf("%d", userEmail))
+	customerExists, _ := sc.paymentService.CustomerExists(fmt.Sprintf("%d", userEmail))
 	if !customerExists {
 		c.JSON(404, gin.H{"customerExists": "false"})
 		c.Abort()
@@ -340,7 +470,7 @@ func customerExistsHandler(c *gin.Context) {
 	c.JSON(200, gin.H{"customerExists": "true"})
 }
 
-func paymentMethodsHandler(c *gin.Context) error {
+func (sc *subscriptionController) paymentMethodsHandler(c *gin.Context) error {
 	userEmail, exists := c.Get("userEmail")
 	if !exists {
 		return jsonHelper.ApiError{
@@ -371,7 +501,7 @@ func paymentMethodsHandler(c *gin.Context) error {
 	return nil
 }
 
-func getSubscriptionPlans(c *gin.Context) error {
+func (sc *subscriptionController) getSubscriptionPlans(c *gin.Context) error {
 	var prices []stripe.Product
 
 	params := &stripe.ProductListParams{}

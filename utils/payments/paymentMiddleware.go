@@ -7,8 +7,8 @@ import (
 )
 
 func PaymentMiddleware(c *gin.Context) {
-
-	stripeService := NewStripePaymentService()
+	paymentRepo := repository.NewPaymentRepo()
+	stripeService := NewStripePaymentService(paymentRepo)
 
 	userEmail, exists := c.Get("userEmail")
 
