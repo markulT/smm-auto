@@ -42,6 +42,7 @@ func SetupPaymentRoutes(r *gin.Engine, ps payments.PaymentService, pr mongoRepos
 	paymentGroup.POST("/setupIntent/create", jsonHelper.MakeHttpHandler(sc.createSetupIntent))
 	paymentGroup.GET("/paymentMethod/getAll", jsonHelper.MakeHttpHandler(sc.paymentMethodsHandler))
 	paymentGroup.GET("/paymentMethod/getDefault", jsonHelper.MakeHttpHandler(sc.getDefaultPaymentMethod))
+	paymentGroup.DELETE("/paymentMethod/delete/:id", jsonHelper.MakeHttpHandler(sc.deletePaymentMethod))
 
 	webHookGroup := r.Group("/stripeWebhook")
 
@@ -55,6 +56,46 @@ type CreateSetupIntentResponse struct {
 
 type SetDefaultPaymentMethodRequest struct {
 	PaymentMethodID string `json:"paymentMethodId"`
+}
+
+func (sc *subscriptionController) deletePaymentMethod(c *gin.Context) error {
+
+	var err error
+
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 417,
+		}
+	}
+
+	paymentMethodID := c.Param("id")
+
+	pm,err := sc.paymentService.GetPaymentMethodByIDAndCustomerID(paymentMethodID, user.CustomerID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Such payment method does not exist",
+			Status: 500,
+		}
+	}
+	err = sc.paymentService.DeletePaymentMethodByID(pm.ID)
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "Error deleting the payment method",
+			Status: 500,
+		}
+	}
+
+	c.JSON(200, gin.H{})
+	return nil
 }
 
 func (sc *subscriptionController) getDefaultPaymentMethod(c *gin.Context) error {

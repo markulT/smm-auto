@@ -29,6 +29,8 @@ type PaymentService interface {
 
 	SetDefaultPaymentMethod(cID string,pmID string) error
 	GetDefaultPaymentMethod(cID string) (string, error)
+	GetPaymentMethodByIDAndCustomerID(pmID string, cID string) (*stripe.PaymentMethod, error)
+	DeletePaymentMethodByID(pmID string) error
 
 	CustomerSubscribed(cID string) bool
 }
@@ -44,6 +46,24 @@ type stripePaymentService struct {
 
 func NewStripePaymentService(pr PaymentRepo) PaymentService {
 	return &stripePaymentService{paymentRepo: pr}
+}
+
+func (s *stripePaymentService) DeletePaymentMethodByID(pmID string) error {
+	_, err := paymentmethod.Detach(pmID, nil)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *stripePaymentService) GetPaymentMethodByIDAndCustomerID(pmID string, cID string) (*stripe.PaymentMethod, error) {
+	pm, err := paymentmethod.Get(pmID, &stripe.PaymentMethodParams{
+		Customer: stripe.String(cID),
+	})
+	if err != nil {
+		return nil, err
+	}
+	return pm, nil
 }
 
 func (s *stripePaymentService) CustomerSubscribed(cID string) bool {
