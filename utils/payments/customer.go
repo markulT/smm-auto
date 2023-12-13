@@ -30,7 +30,7 @@ type PaymentService interface {
 	SetDefaultPaymentMethod(cID string,pmID string) error
 	GetDefaultPaymentMethod(cID string) (string, error)
 	GetPaymentMethodByIDAndCustomerID(pmID string, cID string) (*stripe.PaymentMethod, error)
-	DeletePaymentMethodByID(pmID string) error
+	DeletePaymentMethodByIDAndCustomerID(pmID string, cID string) error
 
 	CustomerSubscribed(cID string) bool
 }
@@ -48,8 +48,22 @@ func NewStripePaymentService(pr PaymentRepo) PaymentService {
 	return &stripePaymentService{paymentRepo: pr}
 }
 
-func (s *stripePaymentService) DeletePaymentMethodByID(pmID string) error {
-	_, err := paymentmethod.Detach(pmID, nil)
+type PaymentError struct {}
+func (e PaymentError) Error() string {
+	return "Generic error"
+}
+
+func (s *stripePaymentService) DeletePaymentMethodByIDAndCustomerID(pmID string, cID string) error {
+
+	pm, err := paymentmethod.Get(pmID, nil)
+	if err != nil {
+		return err
+	}
+	if pm.Customer.ID != cID {
+		return PaymentError{}
+	}
+
+	_, err = paymentmethod.Detach(pmID, nil)
 	if err != nil {
 		return err
 	}
@@ -57,9 +71,7 @@ func (s *stripePaymentService) DeletePaymentMethodByID(pmID string) error {
 }
 
 func (s *stripePaymentService) GetPaymentMethodByIDAndCustomerID(pmID string, cID string) (*stripe.PaymentMethod, error) {
-	pm, err := paymentmethod.Get(pmID, &stripe.PaymentMethodParams{
-		Customer: stripe.String(cID),
-	})
+	pm, err := paymentmethod.Get(pmID, nil)
 	if err != nil {
 		return nil, err
 	}
