@@ -19,6 +19,7 @@ import (
 
 type SchedulerTask struct {
 	FcmClient *messaging.Client
+	ChRepo repository.ChannelRepository
 }
 
 func (s *SchedulerTask) FetchAndProcessPosts()  {
@@ -35,7 +36,8 @@ func (s *SchedulerTask) FetchAndProcessPosts()  {
 func (s *SchedulerTask) ProcessPosts()  {
 	numElements := int(s.getTableLength("posts"))
 	batchSize, _ :=  strconv.Atoi(os.Getenv("batchSize"))
-	var wg sync.WaitGroup
+	//var wg sync.WaitGroup
+	wg := sync.WaitGroup{}
 	for start:=0;start < numElements; start += batchSize {
 		end := start + batchSize -1
 		if end >= numElements {
@@ -60,20 +62,23 @@ func (s *SchedulerTask) getTableLength(tableName string) int64 {
 func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 	defer wg.Done()
 
-	var scheduledPosts []models.Post
+	var scheduledPosts *[]models.Post
 
 	notificationService := notifications.DefaultNotificationService{}
 	notificationService.FcmClient = s.FcmClient
-
-	scheduledPosts = *repository.GetScheduledPostRelations(context.Background(),start, end-start+1, false)
-	for _, scheduledPost := range scheduledPosts {
+	scheduledPosts = repository.GetScheduledPostRelations(context.Background(),start, end-start+1, false)
+	for _, scheduledPost := range *scheduledPosts {
 		originalTimezone, offset := scheduledPost.Scheduled.Zone()
 
 		currentTime := time.Now().In(time.FixedZone(originalTimezone, offset))
 		if scheduledPost.Scheduled.Before(currentTime) {
+			ch, err := s.ChRepo.FindByID(context.Background(),scheduledPost.ChannelID)
+			if err != nil {
+				continue
+			}
 			switch scheduledPost.Type {
 			case "message":
-				telegram.SendMessage(scheduledPost.BotToken,scheduledPost.Text, scheduledPost.ChannelName)
+				telegram.SendMessage(scheduledPost.BotToken,scheduledPost.Text, ch.Name)
 				err := repository.ArchivizePost(context.Background(),scheduledPost.ID)
 				if err != nil {
 					continue
@@ -84,7 +89,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				if err != nil {
 					continue
 				}
-				_, err = telegram.SendPhoto(scheduledPost.BotToken,image, scheduledPost.Text, scheduledPost.Files[0].String(),  scheduledPost.ChannelName)
+				_, err = telegram.SendPhoto(scheduledPost.BotToken,image, scheduledPost.Text, scheduledPost.Files[0].String(),  ch.Name)
 				if err != nil {
 					continue
 				}
@@ -122,7 +127,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 
 					fileModels = append(fileModels, *fileModel)
 				}
-				_, err := telegram.SendMediaGroup(scheduledPost.BotToken,files, filenames,fileModels, scheduledPost.Text,  scheduledPost.ChannelName)
+				_, err := telegram.SendMediaGroup(scheduledPost.BotToken,files, filenames,fileModels, scheduledPost.Text,  ch.Name)
 				if err != nil {
 					continue
 				}
@@ -139,7 +144,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				if err != nil {
 					continue
 				}
-				_, err = telegram.SendVideoBytes(scheduledPost.BotToken,file, scheduledPost.Files[0].String(), scheduledPost.Text, scheduledPost.ChannelName)
+				_, err = telegram.SendVideoBytes(scheduledPost.BotToken,file, scheduledPost.Files[0].String(), scheduledPost.Text, ch.Name)
 				if err != nil {
 					return
 				}
@@ -150,7 +155,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 				if err != nil {
 					continue
 				}
-				_,err = telegram.SendAudioBytes(scheduledPost.BotToken,file, scheduledPost.Text,  scheduledPost.ChannelName, scheduledPost.Files[0].String())
+				_,err = telegram.SendAudioBytes(scheduledPost.BotToken,file, scheduledPost.Text,  ch.Name, scheduledPost.Files[0].String())
 				if err != nil {
 					continue
 				}
@@ -162,7 +167,7 @@ func (s *SchedulerTask) processBatch(start, end int, wg *sync.WaitGroup)  {
 					continue
 				}
 
-				_,err = telegram.SendVoiceBytes(scheduledPost.BotToken,file, scheduledPost.Text,  scheduledPost.ChannelName, scheduledPost.Files[0].String())
+				_,err = telegram.SendVoiceBytes(scheduledPost.BotToken,file, scheduledPost.Text,  ch.Name, scheduledPost.Files[0].String())
 				if err != nil {
 					continue
 				}

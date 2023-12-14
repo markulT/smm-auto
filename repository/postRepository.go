@@ -14,6 +14,7 @@ type PostRepository interface {
 	SavePost(*models.Post) error
 	SavePostWithId(*models.Post, uuid.UUID) error
 	GetPostsByUserID(context.Context, uuid.UUID, *sync.WaitGroup, chan []models.Post)
+	GetPostsByUserIDAndChannelID(context.Context, uuid.UUID, uuid.UUID, *sync.WaitGroup, chan []models.Post)
 	GetPostByID(context.Context, uuid.UUID) (models.Post, error)
 	DeletePostByID(ctx context.Context, uuid2 uuid.UUID) bool
 	GetPostByImageName(ctx context.Context, imageName uuid.UUID) (models.Post,error)
@@ -27,6 +28,33 @@ type postRepositoryImpl struct {
 
 func NewPostRepository() PostRepository {
 	return &postRepositoryImpl{}
+}
+
+func (p *postRepositoryImpl) GetPostsByUserIDAndChannelID(c context.Context, userID uuid.UUID, channelID uuid.UUID, wg *sync.WaitGroup, respch chan []models.Post) {
+	wg.Add(1)
+	postCollection := utils.DB.Collection("posts")
+	postsCursor, err := postCollection.Find(c, bson.M{"userId":userID, "channelId":channelID})
+	if err != nil {
+		respch <- nil
+		return
+	}
+	defer postsCursor.Close(c)
+	var posts []models.Post
+	for postsCursor.Next(c) {
+		var post models.Post
+		if err := postsCursor.Decode(&post);err!=nil {
+			respch <- nil
+			return
+		}
+		posts = append(posts, post)
+	}
+
+	if err := postsCursor.Err();err!=nil {
+		respch<-nil
+		return
+	}
+	respch<-posts
+	wg.Done()
 }
 
 func (p *postRepositoryImpl) GetAllArchivedPostsByUserID(c context.Context, userID uuid.UUID) ([]models.Post, error) {

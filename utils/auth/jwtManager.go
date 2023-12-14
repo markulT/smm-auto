@@ -58,6 +58,9 @@ func Validate(tokenString string) (*jwt.Token, error) {
 	if _,ok := token.Claims.(jwt.Claims);!ok && !token.Valid {
 		return nil, fmt.Errorf("Invalid token")
 	}
+	if token.Claims.(jwt.MapClaims)["exp"].(float64)<float64(time.Now().Unix()) {
+		return nil, fmt.Errorf("Expired token is being used")
+	}
 	return token, nil
 }
 

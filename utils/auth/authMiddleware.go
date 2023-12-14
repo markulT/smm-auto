@@ -15,10 +15,14 @@ func AuthMiddleware(c *gin.Context) {
 		accessToken := authHeader[7:]
 		if _, err := Validate(accessToken);err!=nil {
 			c.JSON(401, gin.H{"error":"Invalid token"})
+			c.Abort()
+			return
 		}
 		userEmail, err := GetSubject(accessToken)
 		if err != nil {
 			c.JSON(401, gin.H{"error":"Error extracting subject from token (invalid token)"})
+			c.Abort()
+			return
 		}
 		c.Set("userEmail", userEmail)
 		c.Next()

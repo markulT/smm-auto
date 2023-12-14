@@ -66,6 +66,7 @@ func main() {
 
 	paymentRepo:=repository.NewPaymentRepo()
 	paymentService:=payments.NewStripePaymentService(paymentRepo)
+	chRepo := repository.NewChannelRepo()
 
 	controllers.SetupAuthRoutes(r)
 	controllers.SetupBotRoutes(r)
@@ -76,6 +77,7 @@ func main() {
 
 	schedulerTask := &scheduler.SchedulerTask{}
 	schedulerTask.FcmClient = firebaseMessagingClient
+	schedulerTask.ChRepo = chRepo
 
 	go schedulerTask.FetchAndProcessPosts()
 	go archiveCleaner.RunArchiveCleaner()

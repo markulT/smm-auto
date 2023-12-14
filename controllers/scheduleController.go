@@ -28,10 +28,11 @@ func SetupScheduleRoutes(r *gin.Engine) {
 	scheduleGroup.Use(auth.AuthMiddleware)
 	scheduleGroup.GET("/", jsonHelper.MakeHttpHandler(getScheduledPostHandler))
 	scheduleGroup.GET("/:id", jsonHelper.MakeHttpHandler(getPostHandler))
+	scheduleGroup.GET("/channel/:channelID", jsonHelper.MakeHttpHandler(getPostsByChannelID))
 	scheduleGroup.DELETE("/delete/:id", jsonHelper.MakeHttpHandler(deletePostHandler))
 	scheduleGroup.GET("/date/:scheduled", jsonHelper.MakeHttpHandler(getPostsByDate))
 
-	scheduleGroup.Use(auth.SubLevelMiddleware(1))
+	//scheduleGroup.Use(auth.SubLevelMiddleware(1))
 	scheduleGroup.POST("/message", jsonHelper.MakeHttpHandler(scheduleMessageHandler))
 	scheduleGroup.POST("/photo", jsonHelper.MakeHttpHandler(schedulePhotoHandler))
 	scheduleGroup.POST("/mediaGroup", jsonHelper.MakeHttpHandler(scheduleMediaGroupHandler))
@@ -39,6 +40,67 @@ func SetupScheduleRoutes(r *gin.Engine) {
 	scheduleGroup.POST("/audio", jsonHelper.MakeHttpHandler(scheduleAudioHandler))
 	scheduleGroup.POST("/voice", jsonHelper.MakeHttpHandler(scheduleVoiceHandler))
 
+}
+
+func getPostsByChannelID(c *gin.Context) error {
+
+	postsRepo := mongoRepository.NewPostRepository()
+	fileRepo := mongoRepository.NewFileRepo()
+
+	channelID := uuid.MustParse(c.Param("channelID"))
+
+	authUserEmail, exists := c.Get("userEmail")
+	if !exists {
+		return jsonHelper.ApiError{
+			Err:    "Unauthorized",
+			Status: 417,
+		}
+	}
+	postsch := make(chan []models.Post, 1)
+	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    err.Error(),
+			Status: 500,
+		}
+	}
+	wg := &sync.WaitGroup{}
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+	go postsRepo.GetPostsByUserIDAndChannelID(ctx, user.ID, channelID, wg, postsch)
+	wg.Wait()
+	for {
+		select {
+		case posts := <-postsch:
+			var responsePostList []*ResponsePost
+			for _, post := range posts {
+				if len(post.Files) > 0 {
+					files, err := fileRepo.FindManyByIDList(context.Background(), post.Files)
+					if err != nil {
+						return jsonHelper.ApiError{
+							Err:    "Failed to load filetypes",
+							Status: 500,
+						}
+					}
+					rp := ResponsePost{Post : post, Files: files}
+					responsePostList = append(responsePostList, &rp)
+				} else {
+
+					files := make([]models.File, 0)
+					rp := ResponsePost{post,files}
+					responsePostList = append(responsePostList, &rp)
+				}
+			}
+			c.JSON(200, gin.H{"posts":responsePostList})
+			c.Abort()
+			return nil
+		case <-ctx.Done():
+			return jsonHelper.ApiError{
+				Err:    "Timeout. Due to internal server error",
+				Status: 500,
+			}
+		}
+	}
 }
 
 func getPostsAudio(c *gin.Context) error {
@@ -445,6 +507,7 @@ func scheduleVoiceHandler(c *gin.Context) error {
 		}
 	}
 
+
 	multipart, _ := c.MultipartForm()
 	files := multipart.File["audio"]
 	caption := multipart.Value["caption"]
@@ -467,6 +530,14 @@ func scheduleVoiceHandler(c *gin.Context) error {
 		return jsonHelper.ApiError{
 			Err:    "Channel with specified ID does not exist",
 			Status: 404,
+		}
+	}
+
+
+	if user.ID.String() != channel.UserID.String() {
+		return jsonHelper.ApiError{
+			Err:    "User does not have access to this source",
+			Status: 403,
 		}
 	}
 
@@ -499,7 +570,7 @@ func scheduleVoiceHandler(c *gin.Context) error {
 		Title:       title[0],
 		ID:          postID,
 		Text:        caption[0],
-		ChannelName: channel.Name,
+		ChannelID: channel.ID,
 		Type:        "voice",
 		Files:       []uuid.UUID{fileID},
 		Scheduled:   parsedTime,
@@ -605,6 +676,14 @@ func scheduleAudioHandler(c *gin.Context) error {
 		}
 	}
 
+
+	if user.ID.String() != channel.UserID.String() {
+		return jsonHelper.ApiError{
+			Err:    "User does not have access to this source",
+			Status: 403,
+		}
+	}
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
 	file, err := files[0].Open()
 	defer file.Close()
@@ -632,7 +711,7 @@ func scheduleAudioHandler(c *gin.Context) error {
 		ID:          postID,
 		Title:       title[0],
 		Text:        caption[0],
-		ChannelName: channel.Name,
+		ChannelID: channel.ID,
 		Type:        "audio",
 		Files:       []uuid.UUID{fileID},
 		Scheduled:   parsedTime,
@@ -698,7 +777,6 @@ type ScheduleMessageRequest struct {
 // @Failure default {object} jsonHelper.ApiError
 // @Router /schedule/audio [post]
 func scheduleMessageHandler(c *gin.Context) error {
-	fmt.Println("3")
 	postRepo := mongoRepository.NewPostRepository()
 
 	var body ScheduleMessageRequest
@@ -736,11 +814,18 @@ func scheduleMessageHandler(c *gin.Context) error {
 		}
 	}
 
+	if user.ID.String() != channel.UserID.String() {
+		return jsonHelper.ApiError{
+			Err:    "User does not have access to this source",
+			Status: 403,
+		}
+	}
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", body.Time)
 	post := models.Post{
 		Title:       body.Title,
 		Text:        body.Text,
-		ChannelName: channel.Name,
+		ChannelID: channel.ID,
 		Type:        "message",
 		UserID:      user.ID,
 		Files:       nil,
@@ -809,6 +894,8 @@ func schedulePhotoHandler(c *gin.Context) error {
 		}
 	}
 
+
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
 	file, err := files[0].Open()
 	defer file.Close()
@@ -840,12 +927,26 @@ func schedulePhotoHandler(c *gin.Context) error {
 		}
 	}
 	user, err := mongoRepository.GetUserByEmail(fmt.Sprintf("%s", authUserEmail))
+	if err != nil {
+		return jsonHelper.ApiError{
+			Err:    "User unauthorized",
+			Status: 417,
+		}
+	}
+
+	if user.ID.String() != channel.UserID.String() {
+		return jsonHelper.ApiError{
+			Err:    "User does not have access to this source",
+			Status: 403,
+		}
+	}
+
 	post := models.Post{
 		Title:       title[0],
 		ID:          postID,
 		UserID:      user.ID,
 		Text:        caption[0],
-		ChannelName: channel.Name,
+		ChannelID: channel.ID,
 		Type:        "photo",
 		Files:       []uuid.UUID{fileID},
 		Scheduled:   parsedTime,
@@ -966,6 +1067,14 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 		}
 	}
 
+
+	if user.ID.String() != channel.UserID.String() {
+		return jsonHelper.ApiError{
+			Err:    "User does not have access to this source",
+			Status: 403,
+		}
+	}
+
 	parsedTime, _ := time.Parse("2006 01-02 15:04 -0700 MST", scheduledTime[0])
 	postID, err := uuid.NewRandom()
 	if err != nil {
@@ -978,7 +1087,7 @@ func scheduleMediaGroupHandler(c *gin.Context) error {
 		Title:       title[0],
 		ID:          postID,
 		Text:        caption[0],
-		ChannelName: channel.Name,
+		ChannelID: channel.ID,
 		Type:        "mediaGroup",
 		Files:       []uuid.UUID{postID},
 		Scheduled:   parsedTime,
@@ -1110,7 +1219,7 @@ func scheduleVideoHandler(c *gin.Context) error {
 		ID:          postID,
 		Title:       title[0],
 		Text:        caption[0],
-		ChannelName: channel.Name,
+		ChannelID: channel.ID,
 		Type:        "video",
 		Files:       []uuid.UUID{},
 		Scheduled:   parsedTime,
