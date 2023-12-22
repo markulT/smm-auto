@@ -85,7 +85,6 @@ func getPostsByChannelID(c *gin.Context) error {
 					rp := ResponsePost{Post : post, Files: files}
 					responsePostList = append(responsePostList, &rp)
 				} else {
-
 					files := make([]models.File, 0)
 					rp := ResponsePost{post,files}
 					responsePostList = append(responsePostList, &rp)

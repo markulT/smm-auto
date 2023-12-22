@@ -11,6 +11,7 @@ import (
 	_ "golearn/docs"
 	"golearn/repository"
 	"golearn/utils"
+	"golearn/utils/analytics"
 	"golearn/utils/archiveCleaner"
 	"golearn/utils/payments"
 	"golearn/utils/s3"
@@ -67,20 +68,30 @@ func main() {
 	paymentRepo:=repository.NewPaymentRepo()
 	paymentService:=payments.NewStripePaymentService(paymentRepo)
 	chRepo := repository.NewChannelRepo()
+	analyticsRepo := repository.NewAnalyticsRepo()
+	analyticsService := analytics.NewAnalyticsService(analyticsRepo)
 
 	controllers.SetupAuthRoutes(r)
+	controllers.SetupAnalyticsRoutes(r, analyticsService, analyticsRepo)
+	controllers.SetupArchiveRoutes(r)
 	controllers.SetupBotRoutes(r)
 	controllers.SetupScheduleRoutes(r)
 	controllers.SetupPaymentRoutes(r, paymentService, paymentRepo)
-	controllers.SetupArchiveRoutes(r)
 	controllers.SetupChannelRoutes(r)
+
 
 	schedulerTask := &scheduler.SchedulerTask{}
 	schedulerTask.FcmClient = firebaseMessagingClient
 	schedulerTask.ChRepo = chRepo
 
+
+
+	analyticsTask := &analytics.AnalyticsTask{}
+	analyticsTask.SetRepo(analytics.CreateBridgeRepo(analyticsRepo))
+
 	go schedulerTask.FetchAndProcessPosts()
 	go archiveCleaner.RunArchiveCleaner()
+	//go analyticsTask.RunAnalyticsModule()
 
 	r.GET("/swagger/*any", ginSwagger.WrapHandler(swaggerFiles.Handler))
 

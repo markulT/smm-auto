@@ -2,11 +2,15 @@
 
 Setup required docker containers
 
+
 ```bash
 cd ./docker
-docker-compose up
+docker-compose -p smm-system up
 ```
+**!Setting the name of the project is necessarily**
+
 And then simply run the main.go
+
 ```bash
 go run main.go
 ```

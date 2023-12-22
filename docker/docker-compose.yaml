@@ -1,14 +1,27 @@
 version: '3'
 services:
   mongo:
-    image: mongo:4.4.6
-    volumes:
-      - ./setup.sh:/docker-entrypoint-initdb.d/setup.sh
-    command: ["mongod", "--replSet", "rs0"]
+    container_name: mongo
+    image: 423414/smm-db:latest
     ports:
       - 27017:27017
+    networks:
+      - smm-network
+  #  mongo:
+#    container_name: mongo
+#    image: mongo:4.4.6
+#    volumes:
+#      - ./setup.sh:/docker-entrypoint-initdb.d/setup.sh
+#    build:
+#      context: .
+#      dockerfile: /mongo/Dockerfile
+#    ports:
+#      - 27017:27017
+#    networks:
+#      - smm-network
   minio:
     image: minio/minio
+    container_name: minio
     volumes:
       - data:/data
     ports:
@@ -17,5 +30,10 @@ services:
       MINIO_ACCESS_KEY: xExFnjfGq7tN
       MINIO_SECRET_KEY: dBXJphBwkaaM
     command: server /data
+    networks:
+      - smm-network
+networks:
+  smm-network:
+    driver: bridge
 volumes:
   data:

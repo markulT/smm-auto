@@ -7,4 +7,5 @@ type Channel struct {
 	Name string `bson:"name" json:"name"`
 	AssignedBotToken string `json:"assignedBotToken" bson:"assignedBotToken"`
 	UserID uuid.UUID `bson:"userId" json:"userId"`
+	ChannelHash string `bson:"channelHash,omitempty" json:"channelHash"`
 }

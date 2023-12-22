@@ -2,7 +2,6 @@ package repository
 
 import (
 	"context"
-	"fmt"
 	"github.com/google/uuid"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -17,12 +16,22 @@ type ChannelRepository interface {
 	DeleteChannel(c context.Context, chID uuid.UUID) error
 	FindByID(c context.Context, chID uuid.UUID) (*models.Channel, error)
 	FindAllByUserID(c context.Context, userID uuid.UUID) (*[]models.Channel, error)
+	SaveChannelHash(c context.Context,ch string, hash string) error
 }
 
 type channelRepoImpl struct {}
 
 func NewChannelRepo() ChannelRepository {
 	return &channelRepoImpl{}
+}
+
+func (cr *channelRepoImpl) SaveChannelHash(c context.Context,ch string, hash string) error {
+	channelCollection := utils.DB.Collection("channels")
+	_, err := channelCollection.UpdateMany(c, bson.M{"name":ch}, bson.M{"channelHash":hash})
+	if err != nil {
+		return err
+	}
+	return nil
 }
 
 func (cr *channelRepoImpl) FindAllByUserID(c context.Context, userID uuid.UUID) (*[]models.Channel, error) {
@@ -89,11 +98,9 @@ func (cr *channelRepoImpl) DeleteChannel(c context.Context, chID uuid.UUID) erro
 	channelCollection := utils.DB.Collection("channels")
 	_, err := channelCollection.DeleteOne(c, bson.M{"_id":chID})
 	if err != nil {
-		fmt.Println("error")
-		fmt.Println(err.Error())
+
 		return err
 	}
-	fmt.Println("success")
 	return nil
 }
 
